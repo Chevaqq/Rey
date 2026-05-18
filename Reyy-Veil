@@ -1,4 +1,4 @@
--- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V6 (MOBILE FRIENDLY) ]] --
+-- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V7 (ULTRA OP) ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,18 +14,13 @@ local Config = {
     CorrectKey = "Reyo",
     ChamsKiller = false,
     ChamsSurvivor = false,
-    SilentAimSurvivor = false, -- Prediksi Survivor (Hanya Killer)
-    SilentAimVeil = false,     -- Prediksi Veil (Hanya Survivor)
-    ShowVeilLine = false
+    SilentAimSurvivor = false, -- Anti-Miss Survivor (Hanya Mengincar Killer)
+    SilentAimVeil = false      -- Anti-Miss Veil Killer (Hanya Mengincar Survivor)
 }
-
--- Ukuran Hitbox Default dan Saat Diperbesar (Anti-Miss)
-local DefaultSize = Vector3.new(2, 2, 1)
-local OPSize = Vector3.new(20, 20, 20) -- Ukuran hitbox raksasa agar anti-miss
 
 -- [[ UI SYSTEM (Transparan 0.5 & Tanpa Tweening) ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ReyHub_ViolenceDistrict_V6"
+ScreenGui.Name = "ReyHub_ViolenceDistrict_V7"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -163,10 +158,9 @@ end
 
 CreateToggle("Chams Killer (Red)", UDim2.new(0.5, -130, 0.1, 0), SurvivorContent, "ChamsKiller")
 CreateToggle("Chams Survivor (Green)", UDim2.new(0.5, -130, 0.35, 0), SurvivorContent, "ChamsSurvivor")
-CreateToggle("Prediksi Killer (Anti-Miss)", UDim2.new(0.5, -130, 0.6, 0), SurvivorContent, "SilentAimSurvivor")
+CreateToggle("Anti-Miss Killer (Orange Line)", UDim2.new(0.5, -130, 0.6, 0), SurvivorContent, "SilentAimSurvivor")
 
-CreateToggle("Prediksi Veil (Anti-Miss)", UDim2.new(0.5, -130, 0.25, 0), KillerContent, "SilentAimVeil")
-CreateToggle("Show Veil Line to Target", UDim2.new(0.5, -130, 0.55, 0), KillerContent, "ShowVeilLine")
+CreateToggle("Anti-Miss Veil (Teleport Tombak)", UDim2.new(0.5, -130, 0.35, 0), KillerContent, "SilentAimVeil")
 
 KeySubmit.MouseButton1Click:Connect(function()
     if KeyInput.Text == Config.CorrectKey then
@@ -180,7 +174,7 @@ KeySubmit.MouseButton1Click:Connect(function()
 end)
 
 
--- [[ UTILITIES ]] --
+-- [[ UTILITIES & ROLE SEPARATION ]] --
 local function IsKillerPlayer(player)
     if player:GetAttribute("Role") == "Killer" or player.Name:lower():find("killer") or (player.Character and player.Character:FindFirstChild("Tombak")) then
         return true
@@ -188,102 +182,161 @@ local function IsKillerPlayer(player)
     return false
 end
 
--- Fungsi Membuat Tracer Line 3D Menggunakan Beam bawaan Roblox (Pasti Muncul di HP)
-local function Create3DTracer(startPart, endPart, color)
-    local att0 = Instance.new("Attachment", startPart)
-    local att1 = Instance.new("Attachment", endPart)
-    
-    local beam = Instance.new("Beam", startPart)
-    beam.Attachment0 = att0
-    beam.Attachment1 = att1
-    beam.Color = ColorSequence.new(color)
-    beam.FaceCamera = true
-    beam.Width0 = 0.4
-    beam.Width1 = 0.4
-    
-    -- Menghilang secara instan setelah hantaman peluru selesai (sepersekian detik)
-    task.wait(0.08)
-    beam:Destroy()
-    att0:Destroy()
-    att1:Destroy()
+local function GetClosestTarget(targetType)
+    local Target = nil
+    local ShortestDistance = math.huge
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local Humanoid = v.Character:FindFirstChildOfClass("Humanoid")
+            if Humanoid and Humanoid.Health > 0 then
+                local isKiller = IsKillerPlayer(v)
+                local isValid = false
+                
+                if targetType == "KillerOnly" and isKiller then
+                    isValid = true
+                elseif targetType == "SurvivorOnly" and not isKiller then
+                    isValid = true
+                end
+
+                if isValid then
+                    local Dist = (v.Character.HumanoidRootPart.Position - Camera.CFrame.Position).Magnitude
+                    if Dist < ShortestDistance then
+                        ShortestDistance = Dist
+                        Target = v
+                    end
+                end
+            end
+        end
+    end
+    return Target
 end
 
--- [[ RENDERING LOOP ENGINE ]] --
+-- [[ INTERFACE DRAWING UNTUK TRACER LINE ORANGE MOBILE ]] --
+local CanvasGui = Instance.new("Folder")
+CanvasGui.Name = "ReyHub_Tracers"
+CanvasGui.Parent = ScreenGui
+
+local function DrawMobileTracer(startPos3D, endPos3D, color)
+    local LineFrame = Instance.new("Frame")
+    LineFrame.BackgroundColor3 = color
+    LineFrame.BorderSizePixel = 0
+    LineFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    LineFrame.Parent = CanvasGui
+
+    local function UpdateLine()
+        if not LineFrame or not LineFrame.Parent then return end
+        local StartPos, StartOnScreen = Camera:WorldToViewportPoint(startPos3D)
+        local EndPos, EndOnScreen = Camera:WorldToViewportPoint(endPos3D)
+
+        if StartOnScreen and EndOnScreen then
+            local Distance = (Vector2.new(EndPos.X, EndPos.Y) - Vector2.new(StartPos.X, StartPos.Y)).Magnitude
+            local Angle = math.atan2(EndPos.Y - StartPos.Y, EndPos.X - StartPos.X)
+
+            LineFrame.Size = UDim2.new(0, Distance, 0, 3) -- Ketebalan garis 3px
+            LineFrame.Position = UDim2.new(0, (StartPos.X + EndPos.X) / 2, 0, (StartPos.Y + EndPos.Y) / 2)
+            LineFrame.Rotation = math.deg(Angle)
+            LineFrame.Visible = true
+        else
+            LineFrame.Visible = false
+        end
+    end
+
+    local Connection
+    Connection = RunService.RenderStepped:Connect(UpdateLine)
+    
+    -- Efek kilat: Hilang otomatis setelah peluru mendarat (80 milidetik)
+    task.delay(0.08, function()
+        Connection:Disconnect()
+        LineFrame:Destroy()
+    end)
+end
+
+-- [[ CORE LOOP FOR VISUALS & DETEKSI PROYEKTIL ]] --
 RunService.RenderStepped:Connect(function()
     if not Config.KeyVerified then return end
 
+    -- Cari target berdasarkan peran saat ini
+    if Config.SilentAimVeil then
+        CurrentTarget = GetClosestTarget("SurvivorOnly")
+    elseif Config.SilentAimSurvivor then
+        CurrentTarget = GetClosestTarget("KillerOnly")
+    else
+        CurrentTarget = nil
+    end
+
+    -- Sistem Chams
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local Root = p.Character.HumanoidRootPart
+        if p ~= LocalPlayer and p.Character then
+            local Highlight = p.Character:FindFirstChildOfClass("Highlight")
             local killerCheck = IsKillerPlayer(p)
 
-            -- 1. SISTEM CHAMS
-            local Highlight = p.Character:FindFirstChildOfClass("Highlight")
             if Config.ChamsKiller and killerCheck then
-                if not Highlight then
-                    Highlight = Instance.new("Highlight", p.Character)
-                end
+                if not Highlight then Highlight = Instance.new("Highlight", p.Character) end
                 Highlight.FillColor = Color3.fromRGB(255, 0, 0)
                 Highlight.FillTransparency = 0.4
                 Highlight.Enabled = true
             elseif Config.ChamsSurvivor and not killerCheck then
-                if not Highlight then
-                    Highlight = Instance.new("Highlight", p.Character)
-                end
+                if not Highlight then Highlight = Instance.new("Highlight", p.Character) end
                 Highlight.FillColor = Color3.fromRGB(0, 255, 0)
                 Highlight.FillTransparency = 0.4
                 Highlight.Enabled = true
             else
                 if Highlight then Highlight:Destroy() end
             end
+        end
+    end
 
-            -- 2. ULTRA HITBOX EXPANSION (Sistem Pengganti Silent Aim / Prediksi Anti-Miss Tanpa Stuck)
-            if Config.SilentAimSurvivor and killerCheck then
-                -- Survivor mengincar Killer: Perbesar hitbox Killer
-                Root.Size = OPSize
-                Root.Transparency = 0.7 -- Sedikit transparan agar kamu tahu areanya meluas
-                Root.CanCollide = false
-            elseif Config.SilentAimVeil and not killerCheck then
-                -- Killer mengincar Survivor: Perbesar hitbox Survivor
-                Root.Size = OPSize
-                Root.Transparency = 0.7
-                Root.CanCollide = false
-            else
-                -- Kembalikan ke ukuran normal jika fitur mati
-                Root.Size = DefaultSize
-                Root.Transparency = 0
-                Root.CanCollide = true
+    -- FORCE TELEPORT TOMBAK/PELURU (Mekanik Anti-Miss Mutlak)
+    -- Mencari objek proyektil baru yang muncul di Workspace untuk langsung dipindahkan ke target
+    if Config.SilentAimVeil and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+        local TargetRoot = CurrentTarget.Character.HumanoidRootPart
+        
+        -- Memindai workspace untuk mencari objek bernama "Tombak" atau proyektil sejenis
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj:IsA("Part") or obj:IsA("Model") then
+                local name = obj.Name:lower()
+                if name:find("tombak") or name:find("spear") or name:find("projectile") then
+                    -- Teleportasikan proyektil langsung ke dalam tubuh target agar memicu hit server
+                    if obj:IsA("Part") then
+                        obj.CFrame = TargetRoot.CFrame
+                        obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Hentikan inersia agar tidak melesat lewat
+                    elseif obj:IsA("Model") and obj.PrimaryPart then
+                        obj:SetPrimaryPartCFrame(TargetRoot.CFrame)
+                    end
+                end
             end
         end
     end
 end)
 
--- [[ DETEKSI KETIKA TOMBOL TEMBAK/AKSI DITEKAN UNTUK LINE TRACER SURVIVOR ]] --
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not Config.KeyVerified or not Config.SilentAimSurvivor then return end
-    
-    -- Mendeteksi sentuhan layar (Touch) atau klik mouse di HP saat menembak
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        
-        -- Cari Killer terdekat untuk ditarik garis orange
-        local ClosestKiller = nil
-        local ShortestDistance = math.huge
-        
-        for _, v in pairs(Players:GetPlayers()) do
-            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and IsKillerPlayer(v) then
-                local Dist = (v.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                if Dist < ShortestDistance then
-                    ShortestDistance = Dist
-                    ClosestKiller = v
+-- [[ HOOK METAMETHOD UNTUK DETEKSI TEMBAKAN SURVIVOR & IMPLEMENTASI TRACER LINE ORANGE ]] --
+local OldNamecall
+OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
+    local Args = {...}
+    local Method = getnamecallmethod()
+
+    if not checkcaller() and (Method == "FindPartOnRayWithIgnoreList" or Method == "FindPartOnRay" or Method == "Raycast") then
+        if Config.SilentAimSurvivor and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+            if IsKillerPlayer(CurrentTarget) then
+                local TargetPart = CurrentTarget.Character.HumanoidRootPart
+                local MyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+                -- Gambar Tracer Line Orange di Layar HP secara instan dari posisi karakter ke posisi target
+                if MyRoot then
+                    task.spawn(function()
+                        DrawMobileTracer(MyRoot.Position, TargetPart.Position, Color3.fromRGB(255, 130, 0))
+                    end)
+                end
+
+                -- Paksa jalur raycast peluru mengarah lurus 100% ke target tanpa deviasi/miss
+                if Args[1] and typeof(Args[1]) == "Ray" then
+                    Args[1] = Ray.new(Args[1].Origin, (TargetPart.Position - Args[1].Origin).Unit * 9999)
+                elseif Method == "Raycast" and typeof(Args[1]) == "Vector3" and typeof(Args[2]) == "Vector3" then
+                    Args[2] = (TargetPart.Position - Args[1]).Unit * 9999
                 end
             end
         end
-        
-        -- Jika killer ditemukan, buat garis orange instan yang akan hilang saat peluru mengenai target
-        if ClosestKiller and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            task.spawn(function()
-                Create3DTracer(LocalPlayer.Character.HumanoidRootPart, ClosestKiller.Character.HumanoidRootPart, Color3.fromRGB(255, 110, 0))
-            end)
-        end
     end
+    return OldNamecall(Self, unpack(Args))
 end)
