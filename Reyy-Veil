@@ -1,11 +1,11 @@
--- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V7 (ULTRA OP) ]] --
+-- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V8 (SUPER DUPER OP) ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- State Pemain
+-- State Target Global
 local CurrentTarget = nil
 
 -- Konfigurasi Fitur
@@ -18,9 +18,9 @@ local Config = {
     SilentAimVeil = false      -- Anti-Miss Veil Killer (Hanya Mengincar Survivor)
 }
 
--- [[ UI SYSTEM (Transparan 0.5 & Tanpa Tweening) ]] --
+-- [[ UI SYSTEM (Transparan 0.5, Instant Tanpa Interpolasi) ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ReyHub_ViolenceDistrict_V7"
+ScreenGui.Name = "ReyHub_ViolenceDistrict_V8"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -158,9 +158,9 @@ end
 
 CreateToggle("Chams Killer (Red)", UDim2.new(0.5, -130, 0.1, 0), SurvivorContent, "ChamsKiller")
 CreateToggle("Chams Survivor (Green)", UDim2.new(0.5, -130, 0.35, 0), SurvivorContent, "ChamsSurvivor")
-CreateToggle("Anti-Miss Killer (Orange Line)", UDim2.new(0.5, -130, 0.6, 0), SurvivorContent, "SilentAimSurvivor")
+CreateToggle("Pistol Teleport (Orange Line)", UDim2.new(0.5, -130, 0.6, 0), SurvivorContent, "SilentAimSurvivor")
 
-CreateToggle("Anti-Miss Veil (Teleport Tombak)", UDim2.new(0.5, -130, 0.35, 0), KillerContent, "SilentAimVeil")
+CreateToggle("Tombak Teleport (Anti-Miss)", UDim2.new(0.5, -130, 0.35, 0), KillerContent, "SilentAimVeil")
 
 KeySubmit.MouseButton1Click:Connect(function()
     if KeyInput.Text == Config.CorrectKey then
@@ -174,7 +174,7 @@ KeySubmit.MouseButton1Click:Connect(function()
 end)
 
 
--- [[ UTILITIES & ROLE SEPARATION ]] --
+-- [[ ROLE SEPARATION UTILITIES ]] --
 local function IsKillerPlayer(player)
     if player:GetAttribute("Role") == "Killer" or player.Name:lower():find("killer") or (player.Character and player.Character:FindFirstChild("Tombak")) then
         return true
@@ -212,9 +212,9 @@ local function GetClosestTarget(targetType)
     return Target
 end
 
--- [[ INTERFACE DRAWING UNTUK TRACER LINE ORANGE MOBILE ]] --
+-- [[ SCREEN CANVAS DRAWING ENGINE (PASTI MUNCUL DI HP) ]] --
 local CanvasGui = Instance.new("Folder")
-CanvasGui.Name = "ReyHub_Tracers"
+CanvasGui.Name = "ReyHub_Tracers_V8"
 CanvasGui.Parent = ScreenGui
 
 local function DrawMobileTracer(startPos3D, endPos3D, color)
@@ -245,18 +245,18 @@ local function DrawMobileTracer(startPos3D, endPos3D, color)
     local Connection
     Connection = RunService.RenderStepped:Connect(UpdateLine)
     
-    -- Efek kilat: Hilang otomatis setelah peluru mendarat (80 milidetik)
+    -- Efek kilat peluru: otomatis hancur instan setelah 0.08 detik
     task.delay(0.08, function()
         Connection:Disconnect()
         LineFrame:Destroy()
     end)
 end
 
--- [[ CORE LOOP FOR VISUALS & DETEKSI PROYEKTIL ]] --
+-- [[ MAIN RENDERING LOOP (VISUAL ONLY - NO CAMERA INTERFERENCE) ]] --
 RunService.RenderStepped:Connect(function()
     if not Config.KeyVerified then return end
 
-    -- Cari target berdasarkan peran saat ini
+    -- Menentukan target secara real-time tanpa mengganggu poros kamera asli
     if Config.SilentAimVeil then
         CurrentTarget = GetClosestTarget("SurvivorOnly")
     elseif Config.SilentAimSurvivor then
@@ -265,7 +265,7 @@ RunService.RenderStepped:Connect(function()
         CurrentTarget = nil
     end
 
-    -- Sistem Chams
+    -- Sistem Chams Visual
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
             local Highlight = p.Character:FindFirstChildOfClass("Highlight")
@@ -286,57 +286,41 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-
-    -- FORCE TELEPORT TOMBAK/PELURU (Mekanik Anti-Miss Mutlak)
-    -- Mencari objek proyektil baru yang muncul di Workspace untuk langsung dipindahkan ke target
-    if Config.SilentAimVeil and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        local TargetRoot = CurrentTarget.Character.HumanoidRootPart
-        
-        -- Memindai workspace untuk mencari objek bernama "Tombak" atau proyektil sejenis
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj:IsA("Part") or obj:IsA("Model") then
-                local name = obj.Name:lower()
-                if name:find("tombak") or name:find("spear") or name:find("projectile") then
-                    -- Teleportasikan proyektil langsung ke dalam tubuh target agar memicu hit server
-                    if obj:IsA("Part") then
-                        obj.CFrame = TargetRoot.CFrame
-                        obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Hentikan inersia agar tidak melesat lewat
-                    elseif obj:IsA("Model") and obj.PrimaryPart then
-                        obj:SetPrimaryPartCFrame(TargetRoot.CFrame)
-                    end
-                end
-            end
-        end
-    end
 end)
 
--- [[ HOOK METAMETHOD UNTUK DETEKSI TEMBAKAN SURVIVOR & IMPLEMENTASI TRACER LINE ORANGE ]] --
-local OldNamecall
-OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
-    local Args = {...}
-    local Method = getnamecallmethod()
+-- [[ HIGH-TIER METAMETHOD INJECTION: TELEPORT PROYEKTIL & TRACER LINE ]] --
+local OldIndex
+OldIndex = hookmetamethod(game, "__index", function(Self, Key)
+    -- Memastikan eksekusi aman dari pemanggilan internal skrip game
+    if not checkcaller() then
+        
+        -- MEKANIK 1: ANTISIPASI UNTUK TOMBAK VEIL (KILLER)
+        if Config.SilentAimVeil and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+            -- Ketika game meminta data posisi/arah CFrame proyektil tombak atau koordinat lemparan tool, 
+            -- kita langsung arahkan data tersebut tepat ke koordinat target Survivor
+            if Key == "CFrame" and (Self.Name:lower():find("tombak") or Self.Name:lower():find("spear") or Self.Name:lower():find("handle")) then
+                return CurrentTarget.Character.HumanoidRootPart.CFrame
+            elseif Key == "Position" and (Self.Name:lower():find("tombak") or Self.Name:lower():find("spear")) then
+                return CurrentTarget.Character.HumanoidRootPart.Position
+            end
+        end
 
-    if not checkcaller() and (Method == "FindPartOnRayWithIgnoreList" or Method == "FindPartOnRay" or Method == "Raycast") then
+        -- MEKANIK 2: ANTISIPASI UNTUK PELURU PISTOL (SURVIVOR)
         if Config.SilentAimSurvivor and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-            if IsKillerPlayer(CurrentTarget) then
-                local TargetPart = CurrentTarget.Character.HumanoidRootPart
+            -- Mencegah peluru menabrak rintangan atau miss dengan mengalihkan data posisi instan ke tubuh Killer
+            if Key == "CFrame" and (Self.Name:lower():find("bullet") or Self.Name:lower():find("peluru") or Self.Name:lower():find("pistol")) then
+                
+                -- Pemicu Gambar Tracer Line Orange Instan tepat saat peluru dilepaskan
                 local MyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-                -- Gambar Tracer Line Orange di Layar HP secara instan dari posisi karakter ke posisi target
                 if MyRoot then
                     task.spawn(function()
-                        DrawMobileTracer(MyRoot.Position, TargetPart.Position, Color3.fromRGB(255, 130, 0))
+                        DrawMobileTracer(MyRoot.Position, CurrentTarget.Character.HumanoidRootPart.Position, Color3.fromRGB(255, 110, 0))
                     end)
                 end
-
-                -- Paksa jalur raycast peluru mengarah lurus 100% ke target tanpa deviasi/miss
-                if Args[1] and typeof(Args[1]) == "Ray" then
-                    Args[1] = Ray.new(Args[1].Origin, (TargetPart.Position - Args[1].Origin).Unit * 9999)
-                elseif Method == "Raycast" and typeof(Args[1]) == "Vector3" and typeof(Args[2]) == "Vector3" then
-                    Args[2] = (TargetPart.Position - Args[1]).Unit * 9999
-                end
+                
+                return CurrentTarget.Character.HumanoidRootPart.CFrame
             end
         end
     end
-    return OldNamecall(Self, unpack(Args))
+    return OldIndex(Self, Key)
 end)
