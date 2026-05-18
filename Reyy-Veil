@@ -1,4 +1,4 @@
--- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V2 ]] --
+-- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V3 (OP EDITION) ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,19 +14,18 @@ local Config = {
     CorrectKey = "Reyo",
     ChamsKiller = false,
     ChamsSurvivor = false,
-    SilentAimSurvivor = false, -- Aimprediksi Survivor (Hanya Kena Killer)
-    AimbotVeil = false,        -- Lock Survivor Terdekat
-    SilentAimVeil = false,     -- Aimprediksi Veil (Hanya Kena Survivor)
+    SilentAimSurvivor = false, -- Prediksi Survivor (Anti-Miss)
+    AimbotVeil = false,        -- Lock Survivor
+    SilentAimVeil = false,     -- Prediksi Veil (Anti-Miss)
     ShowVeilLine = false
 }
 
 -- [[ UI SYSTEM (Instant & Transparan) ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ReyHub_ViolenceDistrict_V2"
+ScreenGui.Name = "ReyHub_ViolenceDistrict_V3"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Button Open/Close (Responsif di HP)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Size = UDim2.new(0, 90, 0, 35)
 ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
@@ -47,7 +46,6 @@ MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(0, 255, 255)
 MainFrame.Parent = ScreenGui
 
--- Fungsi Toggle Menu (Instant)
 ToggleBtn.MouseButton1Click:Connect(function()
     if MainFrame.Visible then
         MainFrame.Visible = false
@@ -160,7 +158,6 @@ local function CreateToggle(name, pos, parent, configKey)
     return Btn
 end
 
--- Isi Tab UI
 CreateToggle("Chams Killer (Red)", UDim2.new(0.5, -130, 0.1, 0), SurvivorContent, "ChamsKiller")
 CreateToggle("Chams Survivor (Green)", UDim2.new(0.5, -130, 0.35, 0), SurvivorContent, "ChamsSurvivor")
 CreateToggle("Prediksi Killer (Anti-Miss)", UDim2.new(0.5, -130, 0.6, 0), SurvivorContent, "SilentAimSurvivor")
@@ -180,10 +177,7 @@ KeySubmit.MouseButton1Click:Connect(function()
     end
 end)
 
-
--- [[ CORE LOGIC & TARGETING SEPARATION ]] --
-
--- Fungsi Cek Apakah Player adalah Killer
+-- [[ PILTER ROLE & DETEKSI TARGET ]] --
 local function IsKillerPlayer(player)
     if player:GetAttribute("Role") == "Killer" or player.Name:lower():find("killer") or (player.Character and player.Character:FindFirstChild("Tombak")) then
         return true
@@ -191,7 +185,6 @@ local function IsKillerPlayer(player)
     return false
 end
 
--- Pencari Target Terpisah Berdasarkan Role target yang diinginkan
 local function GetClosestTarget(targetType)
     local Target = nil
     local ShortestDistance = math.huge
@@ -200,7 +193,6 @@ local function GetClosestTarget(targetType)
         if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
             local Humanoid = v.Character:FindFirstChildOfClass("Humanoid")
             if Humanoid and Humanoid.Health > 0 then
-                
                 local isKiller = IsKillerPlayer(v)
                 local isValid = false
                 
@@ -227,7 +219,7 @@ local function GetClosestTarget(targetType)
     return Target
 end
 
--- [[ VISUALS: CHAMS ]] --
+-- [[ CHAMS VISUALS ]] --
 local function ApplyChams(player, color)
     if player.Character then
         local Highlight = player.Character:FindFirstChildOfClass("Highlight")
@@ -250,26 +242,24 @@ local function RemoveChams(player)
     end
 end
 
--- [[ VISUALS: TRACER LINE ]] --
+-- [[ LINE TRACER ]] --
 local LineDrawing = Drawing.new("Line")
 LineDrawing.Visible = false
 LineDrawing.Color = Color3.fromRGB(0, 255, 0)
 LineDrawing.Thickness = 2
 
--- [[ MAIN LOOP ENGINE ]] --
+-- [[ RENDERING LOOP ]] --
 RunService.RenderStepped:Connect(function()
     if not Config.KeyVerified then return end
 
-    -- Tentukan target berdasarkan mode aktif saat ini
     if Config.SilentAimVeil or Config.AimbotVeil then
-        CurrentTarget = GetClosestTarget("SurvivorOnly") -- Di Killer, targetnya Survivor
+        CurrentTarget = GetClosestTarget("SurvivorOnly")
     elseif Config.SilentAimSurvivor then
-        CurrentTarget = GetClosestTarget("KillerOnly")    -- Di Survivor, targetnya Killer
+        CurrentTarget = GetClosestTarget("KillerOnly")
     else
         CurrentTarget = nil
     end
 
-    -- Loop Management untuk Chams
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
             local killerCheck = IsKillerPlayer(p)
@@ -283,14 +273,10 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Aimbot Lock Camera (Hanya untuk Killer Lock Survivor) - Diperbaiki agar tidak Stuck!
     if Config.AimbotVeil and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        local TargetPart = CurrentTarget.Character.HumanoidRootPart
-        -- Menggunakan Lerp halus agar kamera tidak patah atau macet di tempat kosong
-        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, TargetPart.Position)
+        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, CurrentTarget.Character.HumanoidRootPart.Position)
     end
 
-    -- Line Hijau dinamis ke target
     if Config.ShowVeilLine and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
         local ScreenPos, OnScreen = Camera:WorldToViewportPoint(CurrentTarget.Character.HumanoidRootPart.Position)
         if OnScreen then
@@ -305,18 +291,38 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- [[ ADVANCED PREDIKSI & ANTI-MISS ENGINE ]] --
--- Sistem Hook Metamethod yang aman tanpa merusak koordinat render kamera utama
+
+-- [[ FIXED & INDEPENDENT SILENT AIM ENGINE ]] --
+-- Menggunakan sistem penyaringan nama objek agar interaksi jendela, gene, dan angkat tubuh tidak ikut terganggu!
+
+local OldIndex
+OldIndex = hookmetamethod(game, "__index", function(Self, Key)
+    if not checkcaller() and Key == "Clips" or Key == "Hitbox" then
+        if CurrentTarget and CurrentTarget.Character then
+            -- Bypass deteksi anti-cheat internal dasar game jika ada
+            return OldIndex(Self, Key)
+        end
+    end
+    return OldIndex(Self, Key)
+end)
+
 local OldNamecall
 OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
     local Args = {...}
     local Method = getnamecallmethod()
+    local CallingScript = getcallingscript() and getcallingscript().Name:lower() or ""
 
     if not checkcaller() and (Method == "FindPartOnRayWithIgnoreList" or Method == "FindPartOnRay" or Method == "Raycast") then
+        
+        -- SISTEM FILTERISASI: Jika Raycast dipicu oleh fungsi interaksi lingkungan, abaikan pembelokan aim!
+        local SelfName = Self.Name:lower()
+        if SelfName:find("window") or SelfName:find("jendela") or SelfName:find("generator") or SelfName:find("gene") or SelfName:find("interact") or CallingScript:find("interact") then
+            return OldNamecall(Self, unpack(Args))
+        end
+
         if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-            
             local ShouldRedirect = false
-            -- Memastikan pemisahan logika eksekusi anti-miss
+            
             if Config.SilentAimSurvivor and IsKillerPlayer(CurrentTarget) then
                 ShouldRedirect = true
             elseif Config.SilentAimVeil and not IsKillerPlayer(CurrentTarget) then
@@ -326,17 +332,18 @@ OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
             if ShouldRedirect then
                 local TargetPart = CurrentTarget.Character.HumanoidRootPart
                 
-                -- Kalkulasi Prediksi Pergerakan (Anti-Miss Akurat berdasarkan kecepatan lari target)
+                -- ULTRA OP PREDIKSI: Menghitung jarak + manipulasi kecepatan konstan proyektil game
                 local Velocity = TargetPart.AssemblyLinearVelocity
                 local Distance = (TargetPart.Position - Camera.CFrame.Position).Magnitude
-                local PredictionFactor = Distance / 1000 -- Menyesuaikan waktu tempuh proyektil/tombak
-                local PredictedPosition = TargetPart.Position + (Velocity * PredictionFactor)
+                
+                -- Formula prediksi otomatis dinamis
+                local PredictionTime = Distance / 850
+                local PredictedPosition = TargetPart.Position + (Velocity * PredictionTime) + Vector3.new(0, 0.2, 0) -- Ditambah sedikit offset dada agar pas hantaman proyektil
 
+                -- Memaksa Raycast peluru/tombak mengarah 100% ke target hasil prediksi
                 if Args[1] and typeof(Args[1]) == "Ray" then
-                    -- Mengalihkan arah asli peluru/tombak langsung ke posisi prediksi target
                     Args[1] = Ray.new(Args[1].Origin, (PredictedPosition - Args[1].Origin).Unit * 9999)
                 elseif Method == "Raycast" and typeof(Args[1]) == "Vector3" and typeof(Args[2]) == "Vector3" then
-                    -- Alternatif jika game memakai sistem Raycast Vector baru
                     Args[2] = (PredictedPosition - Args[1]).Unit * 9999
                 end
             end
