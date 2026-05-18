@@ -1,0 +1,346 @@
+-- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V2 ]] --
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- State Pemain
+local CurrentTarget = nil
+
+-- Konfigurasi Fitur (On/Off)
+local Config = {
+    KeyVerified = false,
+    CorrectKey = "Reyo",
+    ChamsKiller = false,
+    ChamsSurvivor = false,
+    SilentAimSurvivor = false, -- Aimprediksi Survivor (Hanya Kena Killer)
+    AimbotVeil = false,        -- Lock Survivor Terdekat
+    SilentAimVeil = false,     -- Aimprediksi Veil (Hanya Kena Survivor)
+    ShowVeilLine = false
+}
+
+-- [[ UI SYSTEM (Instant & Transparan) ]] --
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ReyHub_ViolenceDistrict_V2"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Button Open/Close (Responsif di HP)
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 90, 0, 35)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleBtn.BackgroundTransparency = 0.3
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+ToggleBtn.Text = "CLOSE"
+ToggleBtn.TextSize = 14
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Parent = ScreenGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 340, 0, 240)
+MainFrame.Position = UDim2.new(0.5, -170, 0.5, -120)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BackgroundTransparency = 0.5
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.fromRGB(0, 255, 255)
+MainFrame.Parent = ScreenGui
+
+-- Fungsi Toggle Menu (Instant)
+ToggleBtn.MouseButton1Click:Connect(function()
+    if MainFrame.Visible then
+        MainFrame.Visible = false
+        ToggleBtn.Text = "OPEN"
+    else
+        MainFrame.Visible = true
+        ToggleBtn.Text = "CLOSE"
+    end
+end)
+
+-- [[ KEY SYSTEM TAB ]] --
+local KeyFrame = Instance.new("Frame")
+KeyFrame.Size = UDim2.new(1, 0, 1, 0)
+KeyFrame.BackgroundTransparency = 1
+KeyFrame.Parent = MainFrame
+
+local KeyTitle = Instance.new("TextLabel")
+KeyTitle.Size = UDim2.new(1, 0, 0, 40)
+KeyTitle.Text = "ENTER KEY TO ACCESS"
+KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyTitle.Font = Enum.Font.SourceSansBold
+KeyTitle.TextSize = 18
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Parent = KeyFrame
+
+local KeyInput = Instance.new("TextBox")
+KeyInput.Size = UDim2.new(0, 200, 0, 35)
+KeyInput.Position = UDim2.new(0.5, -100, 0.4, -17)
+KeyInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+KeyInput.TextColor3 = Color3.fromRGB(0, 255, 0)
+KeyInput.Text = ""
+KeyInput.PlaceholderText = "Input Key Here..."
+KeyInput.Parent = KeyFrame
+
+local KeySubmit = Instance.new("TextButton")
+KeySubmit.Size = UDim2.new(0, 120, 0, 35)
+KeySubmit.Position = UDim2.new(0.5, -60, 0.7, -17)
+KeySubmit.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+KeySubmit.Text = "SUBMIT"
+KeySubmit.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeySubmit.Font = Enum.Font.SourceSansBold
+KeySubmit.Parent = KeyFrame
+
+-- [[ MAIN CHEAT INTERFACE ]] --
+local CheatFrame = Instance.new("Frame")
+CheatFrame.Size = UDim2.new(1, 0, 1, 0)
+CheatFrame.BackgroundTransparency = 1
+CheatFrame.Visible = false
+CheatFrame.Parent = MainFrame
+
+local TabSurvivorBtn = Instance.new("TextButton")
+TabSurvivorBtn.Size = UDim2.new(0.5, 0, 0, 35)
+TabSurvivorBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TabSurvivorBtn.Text = "SURVIVOR"
+TabSurvivorBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+TabSurvivorBtn.Parent = CheatFrame
+
+local TabKillerBtn = Instance.new("TextButton")
+TabKillerBtn.Size = UDim2.new(0.5, 0, 0, 35)
+TabKillerBtn.Position = UDim2.new(0.5, 0, 0, 0)
+TabKillerBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+TabKillerBtn.Text = "KILLER"
+TabKillerBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
+TabKillerBtn.Parent = CheatFrame
+
+local SurvivorContent = Instance.new("Frame")
+SurvivorContent.Size = UDim2.new(1, 0, 1, -35)
+SurvivorContent.Position = UDim2.new(0, 0, 0, 35)
+SurvivorContent.BackgroundTransparency = 1
+SurvivorContent.Parent = CheatFrame
+
+local KillerContent = Instance.new("Frame")
+KillerContent.Size = UDim2.new(1, 0, 1, -35)
+KillerContent.Position = UDim2.new(0, 0, 0, 35)
+KillerContent.BackgroundTransparency = 1
+KillerContent.Visible = false
+KillerContent.Parent = CheatFrame
+
+TabSurvivorBtn.MouseButton1Click:Connect(function()
+    SurvivorContent.Visible = true
+    KillerContent.Visible = false
+end)
+
+TabKillerBtn.MouseButton1Click:Connect(function()
+    SurvivorContent.Visible = false
+    KillerContent.Visible = true
+end)
+
+local function CreateToggle(name, pos, parent, configKey)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(0, 260, 0, 30)
+    Btn.Position = pos
+    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Btn.Text = name .. " : OFF"
+    Btn.TextColor3 = Color3.fromRGB(255, 50, 50)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.TextSize = 14
+    Btn.Parent = parent
+
+    Btn.MouseButton1Click:Connect(function()
+        Config[configKey] = not Config[configKey]
+        if Config[configKey] then
+            Btn.Text = name .. " : ON"
+            Btn.TextColor3 = Color3.fromRGB(50, 255, 50)
+        else
+            Btn.Text = name .. " : OFF"
+            Btn.TextColor3 = Color3.fromRGB(255, 50, 50)
+        end
+    end)
+    return Btn
+end
+
+-- Isi Tab UI
+CreateToggle("Chams Killer (Red)", UDim2.new(0.5, -130, 0.1, 0), SurvivorContent, "ChamsKiller")
+CreateToggle("Chams Survivor (Green)", UDim2.new(0.5, -130, 0.35, 0), SurvivorContent, "ChamsSurvivor")
+CreateToggle("Prediksi Killer (Anti-Miss)", UDim2.new(0.5, -130, 0.6, 0), SurvivorContent, "SilentAimSurvivor")
+
+CreateToggle("Aimbot Lock Survivor", UDim2.new(0.5, -130, 0.1, 0), KillerContent, "AimbotVeil")
+CreateToggle("Prediksi Veil (Anti-Miss)", UDim2.new(0.5, -130, 0.35, 0), KillerContent, "SilentAimVeil")
+CreateToggle("Show Veil Line to Target", UDim2.new(0.5, -130, 0.6, 0), KillerContent, "ShowVeilLine")
+
+KeySubmit.MouseButton1Click:Connect(function()
+    if KeyInput.Text == Config.CorrectKey then
+        Config.KeyVerified = true
+        KeyFrame.Visible = false
+        CheatFrame.Visible = true
+    else
+        KeyInput.Text = ""
+        KeyInput.PlaceholderText = "WRONG KEY!"
+    end
+end)
+
+
+-- [[ CORE LOGIC & TARGETING SEPARATION ]] --
+
+-- Fungsi Cek Apakah Player adalah Killer
+local function IsKillerPlayer(player)
+    if player:GetAttribute("Role") == "Killer" or player.Name:lower():find("killer") or (player.Character and player.Character:FindFirstChild("Tombak")) then
+        return true
+    end
+    return false
+end
+
+-- Pencari Target Terpisah Berdasarkan Role target yang diinginkan
+local function GetClosestTarget(targetType)
+    local Target = nil
+    local ShortestDistance = math.huge
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local Humanoid = v.Character:FindFirstChildOfClass("Humanoid")
+            if Humanoid and Humanoid.Health > 0 then
+                
+                local isKiller = IsKillerPlayer(v)
+                local isValid = false
+                
+                if targetType == "KillerOnly" and isKiller then
+                    isValid = true
+                elseif targetType == "SurvivorOnly" and not isKiller then
+                    isValid = true
+                end
+
+                if isValid then
+                    local ScreenPos, OnScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+                    if OnScreen then
+                        local MousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                        local Mag = (Vector2.new(ScreenPos.X, ScreenPos.Y) - MousePos).Magnitude
+                        if Mag < ShortestDistance then
+                            ShortestDistance = Mag
+                            Target = v
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return Target
+end
+
+-- [[ VISUALS: CHAMS ]] --
+local function ApplyChams(player, color)
+    if player.Character then
+        local Highlight = player.Character:FindFirstChildOfClass("Highlight")
+        if not Highlight then
+            Highlight = Instance.new("Highlight")
+            Highlight.Parent = player.Character
+        end
+        Highlight.FillColor = color
+        Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        Highlight.FillTransparency = 0.4
+        Highlight.OutlineTransparency = 0
+        Highlight.Enabled = true
+    end
+end
+
+local function RemoveChams(player)
+    if player.Character then
+        local Highlight = player.Character:FindFirstChildOfClass("Highlight")
+        if Highlight then Highlight:Destroy() end
+    end
+end
+
+-- [[ VISUALS: TRACER LINE ]] --
+local LineDrawing = Drawing.new("Line")
+LineDrawing.Visible = false
+LineDrawing.Color = Color3.fromRGB(0, 255, 0)
+LineDrawing.Thickness = 2
+
+-- [[ MAIN LOOP ENGINE ]] --
+RunService.RenderStepped:Connect(function()
+    if not Config.KeyVerified then return end
+
+    -- Tentukan target berdasarkan mode aktif saat ini
+    if Config.SilentAimVeil or Config.AimbotVeil then
+        CurrentTarget = GetClosestTarget("SurvivorOnly") -- Di Killer, targetnya Survivor
+    elseif Config.SilentAimSurvivor then
+        CurrentTarget = GetClosestTarget("KillerOnly")    -- Di Survivor, targetnya Killer
+    else
+        CurrentTarget = nil
+    end
+
+    -- Loop Management untuk Chams
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local killerCheck = IsKillerPlayer(p)
+            if Config.ChamsKiller and killerCheck then
+                ApplyChams(p, Color3.fromRGB(255, 0, 0))
+            elseif Config.ChamsSurvivor and not killerCheck then
+                ApplyChams(p, Color3.fromRGB(0, 255, 0))
+            else
+                RemoveChams(p)
+            end
+        end
+    end
+
+    -- Aimbot Lock Camera (Hanya untuk Killer Lock Survivor) - Diperbaiki agar tidak Stuck!
+    if Config.AimbotVeil and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+        local TargetPart = CurrentTarget.Character.HumanoidRootPart
+        -- Menggunakan Lerp halus agar kamera tidak patah atau macet di tempat kosong
+        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, TargetPart.Position)
+    end
+
+    -- Line Hijau dinamis ke target
+    if Config.ShowVeilLine and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+        local ScreenPos, OnScreen = Camera:WorldToViewportPoint(CurrentTarget.Character.HumanoidRootPart.Position)
+        if OnScreen then
+            LineDrawing.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            LineDrawing.To = Vector2.new(ScreenPos.X, ScreenPos.Y)
+            LineDrawing.Visible = true
+        else
+            LineDrawing.Visible = false
+        end
+    else
+        LineDrawing.Visible = false
+    end
+end)
+
+-- [[ ADVANCED PREDIKSI & ANTI-MISS ENGINE ]] --
+-- Sistem Hook Metamethod yang aman tanpa merusak koordinat render kamera utama
+local OldNamecall
+OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
+    local Args = {...}
+    local Method = getnamecallmethod()
+
+    if not checkcaller() and (Method == "FindPartOnRayWithIgnoreList" or Method == "FindPartOnRay" or Method == "Raycast") then
+        if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+            
+            local ShouldRedirect = false
+            -- Memastikan pemisahan logika eksekusi anti-miss
+            if Config.SilentAimSurvivor and IsKillerPlayer(CurrentTarget) then
+                ShouldRedirect = true
+            elseif Config.SilentAimVeil and not IsKillerPlayer(CurrentTarget) then
+                ShouldRedirect = true
+            end
+
+            if ShouldRedirect then
+                local TargetPart = CurrentTarget.Character.HumanoidRootPart
+                
+                -- Kalkulasi Prediksi Pergerakan (Anti-Miss Akurat berdasarkan kecepatan lari target)
+                local Velocity = TargetPart.AssemblyLinearVelocity
+                local Distance = (TargetPart.Position - Camera.CFrame.Position).Magnitude
+                local PredictionFactor = Distance / 1000 -- Menyesuaikan waktu tempuh proyektil/tombak
+                local PredictedPosition = TargetPart.Position + (Velocity * PredictionFactor)
+
+                if Args[1] and typeof(Args[1]) == "Ray" then
+                    -- Mengalihkan arah asli peluru/tombak langsung ke posisi prediksi target
+                    Args[1] = Ray.new(Args[1].Origin, (PredictedPosition - Args[1].Origin).Unit * 9999)
+                elseif Method == "Raycast" and typeof(Args[1]) == "Vector3" and typeof(Args[2]) == "Vector3" then
+                    -- Alternatif jika game memakai sistem Raycast Vector baru
+                    Args[2] = (PredictedPosition - Args[1]).Unit * 9999
+                end
+            end
+        end
+    end
+    return OldNamecall(Self, unpack(Args))
+end)
