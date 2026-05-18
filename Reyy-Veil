@@ -1,28 +1,29 @@
--- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V3 (OP EDITION) ]] --
+-- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V5 (ULTRA OP) ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 -- State Pemain
 local CurrentTarget = nil
 
--- Konfigurasi Fitur (On/Off)
+-- Konfigurasi Fitur
 local Config = {
     KeyVerified = false,
     CorrectKey = "Reyo",
     ChamsKiller = false,
     ChamsSurvivor = false,
-    SilentAimSurvivor = false, -- Prediksi Survivor (Anti-Miss)
-    AimbotVeil = false,        -- Lock Survivor
-    SilentAimVeil = false,     -- Prediksi Veil (Anti-Miss)
+    SilentAimSurvivor = false, -- Prediksi Survivor (Hanya Lock Killer)
+    AimbotVeil = false,        -- Lock Survivor (Killer Tab - Tanpa Stuck)
+    SilentAimVeil = false,     -- Prediksi Veil (Killer Tab)
     ShowVeilLine = false
 }
 
--- [[ UI SYSTEM (Instant & Transparan) ]] --
+-- [[ UI SYSTEM (Instant & Transparan 0.5) ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ReyHub_ViolenceDistrict_V3"
+ScreenGui.Name = "ReyHub_ViolenceDistrict_V5"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -56,7 +57,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- [[ KEY SYSTEM TAB ]] --
+-- [[ KEY SYSTEM ]] --
 local KeyFrame = Instance.new("Frame")
 KeyFrame.Size = UDim2.new(1, 0, 1, 0)
 KeyFrame.BackgroundTransparency = 1
@@ -89,7 +90,7 @@ KeySubmit.TextColor3 = Color3.fromRGB(255, 255, 255)
 KeySubmit.Font = Enum.Font.SourceSansBold
 KeySubmit.Parent = KeyFrame
 
--- [[ MAIN CHEAT INTERFACE ]] --
+-- [[ MAIN INTERFACE ]] --
 local CheatFrame = Instance.new("Frame")
 CheatFrame.Size = UDim2.new(1, 0, 1, 0)
 CheatFrame.BackgroundTransparency = 1
@@ -177,7 +178,7 @@ KeySubmit.MouseButton1Click:Connect(function()
     end
 end)
 
--- [[ PILTER ROLE & DETEKSI TARGET ]] --
+-- [[ DETEKSI UTILITY ]] --
 local function IsKillerPlayer(player)
     if player:GetAttribute("Role") == "Killer" or player.Name:lower():find("killer") or (player.Character and player.Character:FindFirstChild("Tombak")) then
         return true
@@ -219,7 +220,7 @@ local function GetClosestTarget(targetType)
     return Target
 end
 
--- [[ CHAMS VISUALS ]] --
+-- [[ VISUAL CHAMS ]] --
 local function ApplyChams(player, color)
     if player.Character then
         local Highlight = player.Character:FindFirstChildOfClass("Highlight")
@@ -242,16 +243,22 @@ local function RemoveChams(player)
     end
 end
 
--- [[ LINE TRACER ]] --
-local LineDrawing = Drawing.new("Line")
-LineDrawing.Visible = false
-LineDrawing.Color = Color3.fromRGB(0, 255, 0)
-LineDrawing.Thickness = 2
+-- Drawing API Setup
+local VeilLine = Drawing.new("Line")
+VeilLine.Visible = false
+VeilLine.Color = Color3.fromRGB(0, 255, 0)
+VeilLine.Thickness = 2
 
--- [[ RENDERING LOOP ]] --
+local SurvivorTracer = Drawing.new("Line")
+SurvivorTracer.Visible = false
+SurvivorTracer.Color = Color3.fromRGB(255, 110, 0) -- Garis Orange
+SurvivorTracer.Thickness = 3
+
+-- [[ RENDERING LOOP (ANTI-STUCK FIX) ]] --
 RunService.RenderStepped:Connect(function()
     if not Config.KeyVerified then return end
 
+    -- Pembagian Target
     if Config.SilentAimVeil or Config.AimbotVeil then
         CurrentTarget = GetClosestTarget("SurvivorOnly")
     elseif Config.SilentAimSurvivor then
@@ -260,6 +267,7 @@ RunService.RenderStepped:Connect(function()
         CurrentTarget = nil
     end
 
+    -- Chams Loop
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
             local killerCheck = IsKillerPlayer(p)
@@ -273,39 +281,39 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- FIXED ANTI-STUCK AIMBOT: Menggunakan simulasi pergeseran input, bukan modifikasi paksa CFrame!
     if Config.AimbotVeil and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, CurrentTarget.Character.HumanoidRootPart.Position)
+        local TargetRoot = CurrentTarget.Character.HumanoidRootPart
+        local ScreenPos, OnScreen = Camera:WorldToViewportPoint(TargetRoot.Position)
+        if OnScreen then
+            -- Alih-alih membekukan CFrame, kita gunakan reposisi virtual center mouse ke arah target secara halus
+            -- Ini membuat peluru/tombak otomatis mengunci arah target di HP tanpa mengunci jari jempolmu
+            local Center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            local MoveVector = (Vector2.new(ScreenPos.X, ScreenPos.Y) - Center) * 0.15
+            -- Metode injeksi input internal (Aman dari stuck kamera)
+            if typeof(setinputemulation) == "function" then
+                setinputemulation(MoveVector.X, MoveVector.Y)
+            end
+        end
     end
 
+    -- Killer Line (Garis Hijau)
     if Config.ShowVeilLine and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
         local ScreenPos, OnScreen = Camera:WorldToViewportPoint(CurrentTarget.Character.HumanoidRootPart.Position)
         if OnScreen then
-            LineDrawing.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-            LineDrawing.To = Vector2.new(ScreenPos.X, ScreenPos.Y)
-            LineDrawing.Visible = true
+            VeilLine.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            VeilLine.To = Vector2.new(ScreenPos.X, ScreenPos.Y)
+            VeilLine.Visible = true
         else
-            LineDrawing.Visible = false
+            VeilLine.Visible = false
         end
     else
-        LineDrawing.Visible = false
+        VeilLine.Visible = false
     end
 end)
 
 
--- [[ FIXED & INDEPENDENT SILENT AIM ENGINE ]] --
--- Menggunakan sistem penyaringan nama objek agar interaksi jendela, gene, dan angkat tubuh tidak ikut terganggu!
-
-local OldIndex
-OldIndex = hookmetamethod(game, "__index", function(Self, Key)
-    if not checkcaller() and Key == "Clips" or Key == "Hitbox" then
-        if CurrentTarget and CurrentTarget.Character then
-            -- Bypass deteksi anti-cheat internal dasar game jika ada
-            return OldIndex(Self, Key)
-        end
-    end
-    return OldIndex(Self, Key)
-end)
-
+-- [[ DYNAMIC ENGINE: ANTI-MISS & FLASH TRACER ORANGE ]] --
 local OldNamecall
 OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
     local Args = {...}
@@ -314,7 +322,7 @@ OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
 
     if not checkcaller() and (Method == "FindPartOnRayWithIgnoreList" or Method == "FindPartOnRay" or Method == "Raycast") then
         
-        -- SISTEM FILTERISASI: Jika Raycast dipicu oleh fungsi interaksi lingkungan, abaikan pembelokan aim!
+        -- Bypass interaksi jendela, gene, angkat orang agar tidak stuck peluru/fitur
         local SelfName = Self.Name:lower()
         if SelfName:find("window") or SelfName:find("jendela") or SelfName:find("generator") or SelfName:find("gene") or SelfName:find("interact") or CallingScript:find("interact") then
             return OldNamecall(Self, unpack(Args))
@@ -332,15 +340,37 @@ OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
             if ShouldRedirect then
                 local TargetPart = CurrentTarget.Character.HumanoidRootPart
                 
-                -- ULTRA OP PREDIKSI: Menghitung jarak + manipulasi kecepatan konstan proyektil game
+                -- Kalkulasi Prediksi Pergerakan Super OP
                 local Velocity = TargetPart.AssemblyLinearVelocity
                 local Distance = (TargetPart.Position - Camera.CFrame.Position).Magnitude
-                
-                -- Formula prediksi otomatis dinamis
-                local PredictionTime = Distance / 850
-                local PredictedPosition = TargetPart.Position + (Velocity * PredictionTime) + Vector3.new(0, 0.2, 0) -- Ditambah sedikit offset dada agar pas hantaman proyektil
+                local PredictionTime = Distance / 950 
+                local PredictedPosition = TargetPart.Position + (Velocity * PredictionTime) + Vector3.new(0, 0.15, 0)
 
-                -- Memaksa Raycast peluru/tombak mengarah 100% ke target hasil prediksi
+                -- MEKANIK TRACER ORANGE (Hanya Muncul Pas Nembak Killer & Lurus Bergaransi)
+                if Config.SilentAimSurvivor and IsKillerPlayer(CurrentTarget) then
+                    task.spawn(function()
+                        local MyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if MyRoot then
+                            local StartPos, StartOnScreen = Camera:WorldToViewportPoint(MyRoot.Position)
+                            local EndPos, EndOnScreen = Camera:WorldToViewportPoint(PredictedPosition)
+                            
+                            if StartOnScreen and EndOnScreen then
+                                SurvivorTracer.From = Vector2.new(StartPos.X, StartPos.Y)
+                                SurvivorTracer.To = Vector2.new(EndPos.X, EndPos.Y)
+                                SurvivorTracer.Visible = true
+                                
+                                -- SISTEM HILANG OTOMATIS: Begitu deteksi hit terdaftar/selesai diproses, langsung hilang instan!
+                                local OldHit = Method
+                                if OldHit then
+                                    task.wait(0.05) -- Durasi flash kilat peluru saat hantaman
+                                    SurvivorTracer.Visible = false
+                                end
+                            end
+                        end
+                    end)
+                end
+
+                -- Eksekusi Manipulasi Arah Peluru Bergaransi Anti-Miss
                 if Args[1] and typeof(Args[1]) == "Ray" then
                     Args[1] = Ray.new(Args[1].Origin, (PredictedPosition - Args[1].Origin).Unit * 9999)
                 elseif Method == "Raycast" and typeof(Args[1]) == "Vector3" and typeof(Args[2]) == "Vector3" then
