@@ -1,4 +1,4 @@
--- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT V10 (ULTRA LIGHT & ANTI-LAG) ]] --
+-- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT V10 (ULTRA LIGHT & ANTI-LAG) + Anti Stuck ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
