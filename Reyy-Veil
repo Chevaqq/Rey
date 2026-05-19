@@ -1,8 +1,7 @@
 -- =============================================================================
--- PROJECT: CHEVA HUB (Violence District - LIGHTWEIGHT NATIVE VERSION)
--- COMPATIBILITY: Delta Executor (Mobile Native PlayerGui)
--- REMOVED: Fullscreen Loading Screen (Fixed No-Show Bug)
--- FIXED BY: Cheva Design Integration
+-- PROJECT: CHEVA HUB (Violence District - ABSOLUTE BYPASS VERSION)
+-- COMPATIBILITY: Delta Executor Mobile (CoreGui / gethui Bypass)
+-- STATUS: FIXED ANTI-GAGAL
 -- =============================================================================
 
 local Players = game:GetService("Players")
@@ -11,8 +10,9 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
 
--- Database Simulasi untuk Save/Load
+-- Database Simulasi untuk Save/Load (TIDAK ADA YANG HILANG)
 local SaveData = {
     WalkSpeed = 16,
     CameraDistance = 70,
@@ -35,14 +35,25 @@ local SaveData = {
     Korblox = false
 }
 
-local UserStatus = "None" -- "VIP", "Free", atau "None"
+local UserStatus = "None" 
 
--- Pembuatan ScreenGui Langsung ke PlayerGui Tanpa Hambatan Layer Fullscreen
+-- =============================================================================
+-- JALUR INJEKSI KHUSUS EXECUTOR MOBILE (ANTI-GAGAL)
+-- =============================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ChevaHub_ViolenceDistrict_Direct"
+ScreenGui.Name = "ChevaHub_Bypass_Official"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Mendeteksi gethui() atau CoreGui agar GUI DIPAKSA MUNCUL di layar HP
+if gethui then
+    ScreenGui.Parent = gethui()
+elseif cl साहब or syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+end
 
 -- Fungsi Notifikasi Cyber
 local function ShowNotification(text)
@@ -70,7 +81,7 @@ local ShowKeySystem
 local ShowMainMenu
 
 -- =============================================================================
--- 1. KEY SYSTEM SCREEN (LANGSUNG MUNCUL TANPA LOADING DELAY)
+-- 1. KEY SYSTEM SCREEN
 -- =============================================================================
 ShowKeySystem = function()
     local KeyFrame = Instance.new("Frame")
@@ -151,7 +162,7 @@ ShowKeySystem = function()
 end
 
 -- =============================================================================
--- 2. MAIN MOD MENU (CYBER DARK BLUE STYLE)
+-- 2. MAIN MOD MENU
 -- =============================================================================
 ShowMainMenu = function()
     local MainFrame = Instance.new("Frame")
@@ -168,7 +179,7 @@ ShowMainMenu = function()
     MainStroke.Color = Color3.fromRGB(0, 85, 220)
     MainStroke.Parent = MainFrame
 
-    -- --- ANIMASI BACKGROUND (JAM 1 JARUM BERPUTAR SUPER CEPAT) ---
+    -- Animasi Jam Berputar Cepat di Background
     local ClockFrame = Instance.new("Frame")
     ClockFrame.Size = UDim2.new(0, 130, 0, 130)
     ClockFrame.Position = UDim2.new(0.5, -65, 0.5, -65)
@@ -211,7 +222,7 @@ ShowMainMenu = function()
     MenuTitle.TextXAlignment = Enum.TextXAlignment.Left
     MenuTitle.Parent = TopBar
 
-    -- --- INTEGRASI WATERMARK BARU: MADE BY CHEVA (PALING ATAS) ---
+    -- Watermark Teks Putih + Outline Hitam di Paling Atas (Sesuai Request!)
     local MadeByChevaLabel = Instance.new("TextLabel")
     MadeByChevaLabel.Size = UDim2.new(0, 150, 1, 0)
     MadeByChevaLabel.Position = UDim2.new(1, -162, 0, 0)
@@ -228,7 +239,6 @@ ShowMainMenu = function()
     WatermarkStroke.Color = Color3.fromRGB(0, 0, 0)
     WatermarkStroke.LineJoinMode = Enum.LineJoinMode.Round
     WatermarkStroke.Parent = MadeByChevaLabel
-    -- -------------------------------------------------------------
 
     -- Sidebar (Tabs)
     local Sidebar = Instance.new("Frame")
@@ -282,7 +292,7 @@ ShowMainMenu = function()
     Pages["Main"].Visible = true
 
     -- =============================================================================
-    -- WIDGET ENGINE (TOGGLE, BOX, BUTTON)
+    -- WIDGET ENGINE
     -- =============================================================================
     local function CreateToggle(parent, text, isVipFeature, restriction, callback)
         local displayName = text
@@ -390,11 +400,11 @@ ShowMainMenu = function()
     end
 
     -- =============================================================================
-    -- LOGIK ENGINE SELURUH FITUR (AMAN & LENGKAP)
+    -- FITUR UTUH TANPA POTONGAN
     -- =============================================================================
     local Toggles = {}
 
-    -- --- TAB: MAIN ---
+    -- TAB: MAIN
     Toggles.InstantHeal = CreateToggle(Pages["Main"], "Instant Heal (Godmode)", false, nil, function(v)
         SaveData.InstantHeal = v
         if v then
@@ -410,7 +420,7 @@ ShowMainMenu = function()
         end
     end)
 
-    -- --- TAB: SURVIVOR ---
+    -- TAB: SURVIVOR
     local boxWS = CreateTextBox(Pages["Survivor"], "Walk Speed", SaveData.WalkSpeed, function(val)
         local num = tonumber(val) or 16
         SaveData.WalkSpeed = num
@@ -430,25 +440,14 @@ ShowMainMenu = function()
         end)
     end)
 
-    -- --- TAB: KILLER ---
-    Toggles.NoSlow = CreateToggle(Pages["Killer"], "No Slow (Continuous Move)", false, nil, function(v)
-        SaveData.NoSlow = v
-    end)
+    -- TAB: KILLER
+    Toggles.NoSlow = CreateToggle(Pages["Killer"], "No Slow (Continuous Move)", false, nil, function(v) SaveData.NoSlow = v end)
+    Toggles.InfBasicStack = CreateToggle(Pages["Killer"], "Infinite Basic Stack", false, nil, function(v) SaveData.InfBasicStack = v end)
+    Toggles.InfAbilities = CreateToggle(Pages["Killer"], "Infinite Abilities (No CD)", true, "Survivor", function(v) SaveData.InfAbilities = v end)
 
-    Toggles.InfBasicStack = CreateToggle(Pages["Killer"], "Infinite Basic Stack", false, nil, function(v)
-        SaveData.InfBasicStack = v
-    end)
+    -- TAB: COMBAT
+    Toggles.TwistOfFate = CreateToggle(Pages["Combat"], "Twist Of Fate (Lock Killer)", true, "Survivor", function(v) SaveData.TwistOfFate = v end)
 
-    Toggles.InfAbilities = CreateToggle(Pages["Killer"], "Infinite Abilities (No CD)", true, "Survivor", function(v)
-        SaveData.InfAbilities = v
-    end)
-
-    -- --- TAB: COMBAT ---
-    Toggles.TwistOfFate = CreateToggle(Pages["Combat"], "Twist Of Fate (Lock Killer)", true, "Survivor", function(v)
-        SaveData.TwistOfFate = v
-    end)
-
-    -- FOV Ring Native GUI Frame
     local FOVRing = Instance.new("Frame")
     FOVRing.Size = UDim2.new(0, SaveData.FOVSize * 2, 0, SaveData.FOVSize * 2)
     FOVRing.Position = UDim2.new(0.5, -SaveData.FOVSize, 0.5, -SaveData.FOVSize)
@@ -476,7 +475,7 @@ ShowMainMenu = function()
         SaveData.FastVaultSpeed = math.clamp(tonumber(val) or 1, 1, 6)
     end)
 
-    -- Aim Prediksi 
+    -- Aim Prediksi Mode Button
     local PredFrame = Instance.new("Frame")
     PredFrame.Size = UDim2.new(1, -10, 0, 35)
     PredFrame.BackgroundTransparency = 1
@@ -508,7 +507,7 @@ ShowMainMenu = function()
         PredBtn.Text = "Mode: " .. tostring(SaveData.AimPrediction)
     end)
 
-    -- --- TAB: VISUAL ---
+    -- TAB: VISUAL
     local function ApplyChams(folderName, color, enabled)
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("Model") and (string.find(string.lower(obj.Name), folderName) or obj:FindFirstChildOfClass("Humanoid")) then
@@ -530,6 +529,4 @@ ShowMainMenu = function()
         end
     end
 
-    Toggles.ChamsKiller = CreateToggle(Pages["Visual"], "Chams Killer (Red Full)", false, nil, function(v)
-        SaveData.ChamsKiller = v
-        ApplyChams("ki
+    Toggles.ChamsKiller = CreateToggle(Pages["Visual"], "Chams Killer (Red Full)", false, nil, functi
