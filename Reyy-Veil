@@ -1,25 +1,29 @@
--- [[ CHEVAHUB V3 - PERFECT MOONWALK & TELEPORT SILENT AIM ]] --
+-- [[ CHEVAHUB V4 - SILENT AIM FOV, HEAL AURA & MOONWALK ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
--- State Fitur
+-- States / Status Fitur
 local moonwalkActive = false
 local silentAimActive = false
+local healAuraActive = false
 local currentMoonwalkMode = 1
 
 local moonwalkConnection = nil
+local silentAimConnection = nil
+local healAuraConnection = nil
 
--- Hapus UI lama agar tidak tumpuk
+-- Hapus UI lama biar gak tumpuk
 if CoreGui:FindFirstChild("ChevaHub") then
     CoreGui.ChevaHub:Destroy()
 end
 
 -- ==========================================
--- [1] SETUP UTAMA SCREEN GUI & MENU UTAMA
+-- [1] SCREEN GUI & MENU UTAMA (TRANSPARAN 0.5)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ChevaHub"
@@ -30,10 +34,10 @@ else
     ScreenGui.Parent = CoreGui
 end
 
--- Tombol Open Menu (Panggil Menu Utama)
+-- Tombol Open Menu
 local OpenBtn = Instance.new("TextButton")
 OpenBtn.Name = "OpenBtn"
-OpenBtn.Size = UDim2.new(0, 90, 0, 35)
+OpenBtn.Size = UDim2.new(0, 95, 0, 35)
 OpenBtn.Position = UDim2.new(0.85, 0, 0.05, 0)
 OpenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 OpenBtn.BackgroundTransparency = 0.3
@@ -49,10 +53,10 @@ local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 6)
 OpenCorner.Parent = OpenBtn
 
--- Main Panel (Hitam Transparan 0.5)
+-- Main Frame Panel
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 250)
+MainFrame.Size = UDim2.new(0, 360, 0, 260)
 MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 MainFrame.BackgroundTransparency = 0.5
@@ -112,7 +116,7 @@ IconDevil.Text = "👹"
 IconDevil.TextSize = 26
 IconDevil.Parent = Sidebar
 
--- Home Tab
+-- Home Tab View
 local HomeTab = Instance.new("Frame")
 HomeTab.Size = UDim2.new(1, -75, 1, 0)
 HomeTab.Position = UDim2.new(0, 75, 0, 0)
@@ -129,7 +133,7 @@ HomeTitle.Font = Enum.Font.GothamBold
 HomeTitle.TextSize = 32
 HomeTitle.Parent = HomeTab
 
--- Main Menu Tab
+-- Main Menu Tab View (Konten Fitur)
 local MainMenuTab = Instance.new("Frame")
 MainMenuTab.Size = UDim2.new(1, -75, 1, 0)
 MainMenuTab.Position = UDim2.new(0, 75, 0, 0)
@@ -139,7 +143,7 @@ MainMenuTab.Parent = MainFrame
 
 local MenuTitle = Instance.new("TextLabel")
 MenuTitle.Size = UDim2.new(1, 0, 0, 40)
-MenuTitle.Position = UDim2.new(0, 10, 0, 15)
+MenuTitle.Position = UDim2.new(0, 10, 0, 10)
 MenuTitle.BackgroundTransparency = 1
 MenuTitle.Text = "Main Menu"
 MenuTitle.TextColor3 = Color3.fromRGB(150, 160, 180)
@@ -149,8 +153,8 @@ MenuTitle.TextXAlignment = Enum.TextXAlignment.Left
 MenuTitle.Parent = MainMenuTab
 
 local MoonwalkToggle = Instance.new("TextButton")
-MoonwalkToggle.Size = UDim2.new(1, -20, 0, 40)
-MoonwalkToggle.Position = UDim2.new(0, 10, 0, 70)
+MoonwalkToggle.Size = UDim2.new(1, -20, 0, 35)
+MoonwalkToggle.Position = UDim2.new(0, 10, 0, 55)
 MoonwalkToggle.BackgroundTransparency = 1
 MoonwalkToggle.Text = "Monwalk ON/OFF"
 MoonwalkToggle.TextColor3 = Color3.fromRGB(255, 50, 50)
@@ -160,8 +164,8 @@ MoonwalkToggle.TextXAlignment = Enum.TextXAlignment.Left
 MoonwalkToggle.Parent = MainMenuTab
 
 local SilentAimToggle = Instance.new("TextButton")
-SilentAimToggle.Size = UDim2.new(1, -20, 0, 40)
-SilentAimToggle.Position = UDim2.new(0, 10, 0, 125)
+SilentAimToggle.Size = UDim2.new(1, -20, 0, 35)
+SilentAimToggle.Position = UDim2.new(0, 10, 0, 100)
 SilentAimToggle.BackgroundTransparency = 1
 SilentAimToggle.Text = "Silent Aim ON/OFF"
 SilentAimToggle.TextColor3 = Color3.fromRGB(255, 50, 50)
@@ -170,17 +174,28 @@ SilentAimToggle.TextSize = 16
 SilentAimToggle.TextXAlignment = Enum.TextXAlignment.Left
 SilentAimToggle.Parent = MainMenuTab
 
+local HealAuraToggle = Instance.new("TextButton")
+HealAuraToggle.Size = UDim2.new(1, -20, 0, 35)
+HealAuraToggle.Position = UDim2.new(0, 10, 0, 145)
+HealAuraToggle.BackgroundTransparency = 1
+HealAuraToggle.Text = "Heal Aura ON/OFF"
+HealAuraToggle.TextColor3 = Color3.fromRGB(255, 50, 50)
+HealAuraToggle.Font = Enum.Font.GothamBold
+HealAuraToggle.TextSize = 16
+HealAuraToggle.TextXAlignment = Enum.TextXAlignment.Left
+HealAuraToggle.Parent = MainMenuTab
+
 
 -- ==========================================
--- [2] MOONWALK CONTROLLER STYLE ZENTAZZ (KANAN ATAS)
+-- [2] MOONWALK CONTROLLER WINDOW (ZENTAZZ HUB STYLE)
 -- ==========================================
 local MoonwalkController = Instance.new("Frame")
 MoonwalkController.Name = "MoonwalkController"
-MoonwalkController.Size = UDim2.new(0, 140, 0, 105)
+MoonwalkController.Size = UDim2.new(0, 140, 0, 110)
 MoonwalkController.Position = UDim2.new(0.82, 0, 0.15, 0)
-MoonwalkController.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MoonwalkController.BackgroundTransparency = 0.3
-MoonwalkController.Visible = false -- Muncul hanya jika Moonwalk ON di menu utama
+MoonwalkController.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MoonwalkController.BackgroundTransparency = 0.2
+MoonwalkController.Visible = false
 MoonwalkController.Draggable = true
 MoonwalkController.Parent = ScreenGui
 
@@ -197,9 +212,8 @@ IndicatorText.Font = Enum.Font.GothamBold
 IndicatorText.TextSize = 11
 IndicatorText.Parent = MoonwalkController
 
--- Tombol Mode 1 / Mode 2
 local ModeBtn = Instance.new("TextButton")
-ModeBtn.Size = UDim2.new(0, 120, 0, 25)
+ModeBtn.Size = UDim2.new(0, 120, 0, 26)
 ModeBtn.Position = UDim2.new(0.5, -60, 0, 30)
 ModeBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 ModeBtn.Text = "Mode 1"
@@ -212,12 +226,11 @@ local ModeCorner = Instance.new("UICorner")
 ModeCorner.CornerRadius = UDim.new(0, 6)
 ModeCorner.Parent = ModeBtn
 
--- Tombol START / STOP (Ditambahkan agar persis seperti di video)
 local StartStopBtn = Instance.new("TextButton")
 StartStopBtn.Size = UDim2.new(0, 120, 0, 30)
-StartStopBtn.Position = UDim2.new(0.5, -60, 0, 63)
-StartStopBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60) -- Default langsung START (Hijau)
-StartStopBtn.Text = "STARTING"
+StartStopBtn.Position = UDim2.new(0.5, -60, 0, 65)
+StartStopBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+StartStopBtn.Text = "STOP"
 StartStopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 StartStopBtn.Font = Enum.Font.GothamBold
 StartStopBtn.TextSize = 12
@@ -229,31 +242,49 @@ StartStopCorner.Parent = StartStopBtn
 
 
 -- ==========================================
--- [3] LOGIKA MEKANIK PRO (ANTI-MISS & CONTROLLER)
+-- [3] SILENT AIM FOV RING DRAWING (RCAHUB STYLE)
+-- ==========================================
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Color = Color3.fromRGB(255, 0, 0) -- Warna Merah Persis di Video
+FOVCircle.Thickness = 2
+FOVCircle.Radius = 150 -- Ukuran jangkauan FOV lingkar tengah
+FOVCircle.Filled = false
+FOVCircle.Transparency = 1
+FOVCircle.Visible = false
+
+
+-- ==========================================
+-- [4] SCRIPT LOGIKA LOGIC MEKANIK UTAMA
 -- ==========================================
 
--- Mencari Target Kepala Killer
-local function GetKillerHead()
+-- Fungsi Lacak Kepala Killer Terdekat dalam FOV
+local function GetClosestKillerInFOV()
+    local target = nil
+    local shortestDistance = math.huge
+    
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-            if string.find(string.lower(p.Name), "killer") or string.find(string.lower(p.Character.Name), "killer") then
-                return p.Character.Head
+            -- Cari entitas bertindak sebagai killer
+            if string.find(string.lower(p.Name), "killer") or string.find(string.lower(p.Character.Name), "killer") or p.Character:FindFirstChild("Knife") then
+                local head = p.Character.Head
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                
+                if onScreen then
+                    -- Hitung jarak dari posisi crosshair tengah HP ke target kepala Killer
+                    local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                    if distance < shortestDistance and distance <= FOVCircle.Radius then
+                        shortestDistance = distance
+                        target = head
+                    end
+                end
             end
         end
     end
-    -- Cadangan jika nama disembunyikan game
-    for _, obj in pairs(workspace:GetChildren()) do
-        if obj:IsA("Model") and obj:FindFirstChild("Head") and obj ~= LocalPlayer.Character then
-            if obj:FindFirstChild("Knife") or string.find(string.lower(obj.Name), "killer") then
-                return obj.Head
-            end
-        end
-    end
-    return nil
+    return target
 end
 
--- Mekanik Jalannya Moonwalk
-local function UpdateMoonwalkState()
+-- Ambil kontrol pergerakan Moonwalk
+local function UpdateMoonwalk()
     if moonwalkActive then
         if moonwalkConnection then moonwalkConnection:Disconnect() end
         moonwalkConnection = RunService.RenderStepped:Connect(function()
@@ -264,17 +295,16 @@ local function UpdateMoonwalkState()
                 hum.AutoRotate = false
                 
                 if hum.MoveDirection.Magnitude > 0 then
-                    local lookVector = Camera.CFrame.LookVector
-                    local moveDir = hum.MoveDirection
-                    local dotProduct = moveDir:Dot(Vector3.new(lookVector.X, 0, lookVector.Z).Unit)
+                    local look = Camera.CFrame.LookVector
+                    local dotProduct = hum.MoveDirection:Dot(Vector3.new(look.X, 0, look.Z).Unit)
                     
                     if currentMoonwalkMode == 1 then
-                        root.CFrame = CFrame.new(root.Position, root.Position - Vector3.new(lookVector.X, 0, lookVector.Z))
+                        root.CFrame = CFrame.new(root.Position, root.Position - Vector3.new(look.X, 0, look.Z))
                     elseif currentMoonwalkMode == 2 then
                         if dotProduct > 0 then
-                            root.CFrame = CFrame.new(root.Position, root.Position - Vector3.new(lookVector.X, 0, lookVector.Z))
+                            root.CFrame = CFrame.new(root.Position, root.Position - Vector3.new(look.X, 0, look.Z))
                         else
-                            root.CFrame = CFrame.new(root.Position, root.Position + Vector3.new(lookVector.X, 0, lookVector.Z))
+                            root.CFrame = CFrame.new(root.Position, root.Position + Vector3.new(look.X, 0, look.Z))
                         end
                     end
                 end
@@ -282,33 +312,60 @@ local function UpdateMoonwalkState()
         end)
     else
         if moonwalkConnection then moonwalkConnection:Disconnect() end
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.AutoRotate = true
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.AutoRotate = true
         end
     end
 end
 
--- MEKANIK SILENT AIM REDIRECTION (TELEPORT JALUR PELURU ANTI-MISS)
-local OldFindPartOnRay = workspace.FindPartOnRay
-local OldRaycast = workspace.Raycast
+-- HEAL AURA ENGINE (Violence District Remote Injector Bypass)
+local function StartHealAura()
+    if healAuraConnection then healAuraConnection:Disconnect() end
+    healAuraConnection = RunService.Heartbeat:Connect(function()
+        if healAuraActive and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            local hum = LocalPlayer.Character.Humanoid
+            if hum.Health < hum.MaxHealth then
+                -- Memaksa pengisian darah instan client-side & server remote fire bypass
+                hum.Health = hum.MaxHealth
+                
+                -- Lacak trigger remote healing di game
+                for _, v in pairs(game:GetDescendants()) do
+                    if v:IsA("RemoteEvent") and (string.find(string.lower(v.Name), "heal") or string.find(string.lower(v.Name), "medkit") or string.find(string.lower(v.Name), "givehealth")) then
+                        v:FireServer(LocalPlayer.Character, hum.MaxHealth)
+                    end
+                end
+            end
+        end
+    end)
+end
 
--- Hook metatable raycast workspace agar arah tembakan peluru angin ter-teleport otomatis ke Killer
+-- SILENT AIM METATABLE HOOKING (ANTI-MISS TOTAL)
 local gmt = getrawmetatable(game)
+local oldIndex = gmt.__index
 local oldNamecall = gmt.__namecall
 setreadonly(gmt, false)
 
+-- Mengubah posisi hit mouse peluru di core engine secara real-time
+gmt.__index = newcclosure(function(self, idx)
+    if silentAimActive and tostring(self) == "Mouse" and (idx == "Hit" or idx == "Target") then
+        local targetKiller = GetClosestKillerInFOV()
+        if targetKiller then
+            return (idx == "Hit" and targetKiller.CFrame or targetKiller)
+        end
+    end
+    return oldIndex(self, idx)
+end)
+
+-- Mengubah arah Raycast senjata game agar belok otomatis 
 gmt.__namecall = newcclosure(function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
-    
-    if silentAimActive and (method == "Raycast" or method == "FindPartOnRay" or method == "findPartOnRay") then
-        local targetHead = GetKillerHead()
-        if targetHead then
-            -- Paksa titik jatuhnya peluru/raycast langsung mengarah akurat ke kepala Killer
+    if silentAimActive and (method == "Raycast" or method == "FindPartOnRay") then
+        local targetKiller = GetClosestKillerInFOV()
+        if targetKiller then
             if method == "Raycast" then
-                args[2] = (targetHead.Position - args[1]).Unit * 1000
-                return OldRaycast(self, table.unpack(args))
+                args[2] = (targetKiller.Position - args[1]).Unit * 1000
+                return oldNamecall(self, table.unpack(args))
             end
         end
     end
@@ -316,9 +373,14 @@ gmt.__namecall = newcclosure(function(self, ...)
 end)
 setreadonly(gmt, true)
 
+-- Loop update posisi gambar lingkaran FOV di layar HP
+RunService.RenderStepped:Connect(function()
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+end)
+
 
 -- ==========================================
--- [4] INTERAKSI TOMBOL-TOMBOL UI
+-- [5] INTERAKSI FUNGSIONAL UI CONTROLLER
 -- ==========================================
 
 Tab1Btn.MouseButton1Click:Connect(function()
@@ -336,40 +398,38 @@ OpenBtn.MouseButton1Click:Connect(function()
     OpenBtn.Visible = false
 end)
 
--- Toggle Menu Utama Moonwalk
+-- Main Menu Moonwalk Toggle
 MoonwalkToggle.MouseButton1Click:Connect(function()
     if not MoonwalkController.Visible then
-        -- Jika dinyalakan pertama kali dari Menu Utama
         MoonwalkToggle.TextColor3 = Color3.fromRGB(50, 255, 50)
         MoonwalkController.Visible = true
         moonwalkActive = true
         StartStopBtn.Text = "STOP"
         StartStopBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-        UpdateMoonwalkState()
+        UpdateMoonwalk()
     else
-        -- Jika dimatikan total dari Menu Utama
         MoonwalkToggle.TextColor3 = Color3.fromRGB(255, 50, 50)
         MoonwalkController.Visible = false
         moonwalkActive = false
-        UpdateMoonwalkState()
+        UpdateMoonwalk()
     end
 end)
 
--- Tombol START / STOP di Menu Kanan Atas yang Melayang
+-- Floating Menu Start/Stop Button
 StartStopBtn.MouseButton1Click:Connect(function()
     moonwalkActive = not moonwalkActive
     if moonwalkActive then
         StartStopBtn.Text = "STOP"
-        StartStopBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60) -- Berubah merah saat aktif (buat klik stop)
-        UpdateMoonwalkState()
+        StartStopBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        UpdateMoonwalk()
     else
         StartStopBtn.Text = "START"
-        StartStopBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60) -- Berubah hijau saat mati (buat klik start)
-        UpdateMoonwalkState()
+        StartStopBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
+        UpdateMoonwalk()
     end
 end)
 
--- Ganti Mode Di Menu Kanan Atas
+-- Floating Menu Mode Switcher
 ModeBtn.MouseButton1Click:Connect(function()
     if currentMoonwalkMode == 1 then
         currentMoonwalkMode = 2
@@ -380,21 +440,36 @@ ModeBtn.MouseButton1Click:Connect(function()
         ModeBtn.Text = "Mode 1"
         ModeBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     end
-    UpdateMoonwalkState()
+    if moonwalkActive then UpdateMoonwalk() end
 end)
 
--- Toggle Silent Aim
+-- Silent Aim Toggle
 SilentAimToggle.MouseButton1Click:Connect(function()
     silentAimActive = not silentAimActive
     if silentAimActive then
         SilentAimToggle.TextColor3 = Color3.fromRGB(50, 255, 50)
+        FOVCircle.Visible = true
     else
         SilentAimToggle.TextColor3 = Color3.fromRGB(255, 50, 50)
+        FOVCircle.Visible = false
     end
 end)
 
--- Auto Re-Attach
+-- Heal Aura Toggle
+HealAuraToggle.MouseButton1Click:Connect(function()
+    healAuraActive = not healAuraActive
+    if healAuraActive then
+        HealAuraToggle.TextColor3 = Color3.fromRGB(50, 255, 50)
+        StartHealAura()
+    else
+        HealAuraToggle.TextColor3 = Color3.fromRGB(255, 50, 50)
+        if healAuraConnection then healAuraConnection:Disconnect() end
+    end
+end)
+
+-- Auto Re-Attach Respawn
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.6)
-    if moonwalkActive then UpdateMoonwalkState() end
+    if moonwalkActive then UpdateMoonwalk() end
+    if healAuraActive then StartHealAura() end
 end)
