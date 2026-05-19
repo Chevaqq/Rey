@@ -1,11 +1,11 @@
 -- =================================================================
--- VIOLENCE DISTRICT - SILENT AIM V2 (NO CAMERA STUCK)
+-- VIOLENCE DISTRICT - SILENT AIM V3 (RAYCAST HOOK & PERFECT CLOCK)
 -- RUN WITH DELTA EXECUTOR // MOBILE OPTIMIZED
 -- =================================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
 
 -- --- CONFIGURATION & STATES ---
 local ScriptConfig = {
@@ -19,12 +19,12 @@ local ScriptConfig = {
 local function IsKiller(player)
     if player == LocalPlayer then return false end
     
-    -- 1. Deteksi lewat sistem Team
+    -- 1. Berdasarkan Tim Resmi
     if player.Team and (player.Team.Name:lower():find("killer") or player.Team.Name:lower():find("slasher")) then
         return true
     end
     
-    -- 2. Deteksi alternatif jika memegang senjata Killer (Pisau, dll)
+    -- 2. Berdasarkan Tool yang dipegang (Pisau/Senjata)
     local character = player.Character
     if character then
         for _, item in pairs(character:GetChildren()) do
@@ -63,38 +63,48 @@ local function GetClosestKiller()
     return closestTarget
 end
 
--- --- SILENT AIM ENGINE V2 (INDEX HOOK) ---
--- Mengubah target mouse secara internal tanpa merusak koordinat kamera utama
+-- --- SILENT AIM ENGINE V3 (ADVANCED METAMETHOD HOOK) ---
+-- Membelokkan peluru secara matematis tanpa mengunci pergerakan kamera utama kamu
 local gmt = getrawmetatable(game)
 setreadonly(gmt, false)
-local oldIndex = gmt.__index
+local oldNamecall = gmt.__namecall
 
-gmt.__index = newcclosure(function(self, index)
-    if self == Mouse and ScriptConfig.SilentAimEnabled and (index == "Hit" or index == "Target") then
-        local targetPart = GetClosestKiller()
-        if targetPart then
-            if index == "Hit" then
-                return targetPart.CFrame
-            elseif index == "Target" then
-                return targetPart
+gmt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    
+    if ScriptConfig.SilentAimEnabled and not checkcaller() then
+        if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+            local targetPart = GetClosestKiller()
+            if targetPart then
+                if method == "Raycast" then
+                    -- args[1] = Origin, args[2] = Direction
+                    local origin = args[1]
+                    args[2] = (targetPart.Position - origin).Unit * 1000
+                elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+                    -- args[1] = Ray
+                    local origin = args[1].Origin
+                    args[1] = Ray.new(origin, (targetPart.Position - origin).Unit * 1000)
+                end
+                return oldNamecall(self, unpack(args))
             end
         end
     end
-    return oldIndex(self, index)
+    return oldNamecall(self, ...)
 end)
 setreadonly(gmt, true)
 
 
 -- =================================================================
--- MODERN CYBERPUNK UI GENERATOR WITH FAST SPINNING CLOCK
+-- MODERN CYBERPUNK UI GENERATOR WITH PERFECT CENTERED CLOCK
 -- =================================================================
 
-if game.CoreGui:FindFirstChild("CyberHub_ViolenceDistrict_V2") then
-    game.CoreGui["CyberHub_ViolenceDistrict_V2"]:Destroy()
+if game.CoreGui:FindFirstChild("CyberHub_ViolenceDistrict_V3") then
+    game.CoreGui["CyberHub_ViolenceDistrict_V3"]:Destroy()
 end
 
 local CyberGui = Instance.new("ScreenGui")
-CyberGui.Name = "CyberHub_ViolenceDistrict_V2"
+CyberGui.Name = "CyberHub_ViolenceDistrict_V3"
 CyberGui.Parent = game.CoreGui
 CyberGui.ResetOnSpawn = false
 
@@ -124,14 +134,14 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -20, 0, 35)
 Title.Position = UDim2.new(0, 15, 0, 5)
 Title.BackgroundTransparency = 1
-Title.Text = "CYBER HUB // SILENT_AIM_V2"
+Title.Text = "CYBER HUB // SILENT_AIM_V3"
 Title.TextColor3 = ScriptConfig.CyberColor
 Title.TextSize = 16
 Title.Font = Enum.Font.Code
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MainPanel
 
--- --- ANALOG CYBER CLOCK BACKGROUND ---
+-- --- ANALOG CYBER CLOCK FRAME ---
 local ClockFrame = Instance.new("Frame")
 ClockFrame.Size = UDim2.new(0, 110, 0, 110)
 ClockFrame.Position = UDim2.new(1, -130, 0.5, -45)
@@ -148,14 +158,8 @@ ClockStroke.Color = ScriptConfig.CyberColor
 ClockStroke.Thickness = 1
 ClockStroke.Parent = ClockFrame
 
-local CenterDot = Instance.new("Frame")
-CenterDot.Size = UDim2.new(0, 6, 0, 6)
-CenterDot.Position = UDim2.new(0.5, -3, 0.5, -3)
-CenterDot.BackgroundColor3 = ScriptConfig.CyberColor
-CenterDot.Parent = ClockFrame
-
--- Angka Jam
-local clockNumbers = {["12"] = UDim2.new(0.5, -10, 0, 5), ["3"] = UDim2.new(1, -15, 0.5, -7), ["6"] = UDim2.new(0.5, -10, 1, -20), ["9"] = UDim2.new(0, 5, 0.5, -7)}
+-- Angka Jam (12, 3, 6, 9)
+local clockNumbers = {["12"] = UDim2.new(0.5, -10, 0, 4), ["3"] = UDim2.new(1, -16, 0.5, -7), ["6"] = UDim2.new(0.5, -10, 1, -18), ["9"] = UDim2.new(0, 4, 0.5, -7)}
 for numStr, pos in pairs(clockNumbers) do
     local numLabel = Instance.new("TextLabel")
     numLabel.Size = UDim2.new(0, 20, 0, 15)
@@ -168,28 +172,44 @@ for numStr, pos in pairs(clockNumbers) do
     numLabel.Parent = ClockFrame
 end
 
--- Jarum Jam & Menit
+-- --- POROS TENGAH & JARUM JAM FIX (PERFECT CENTERED) ---
+-- Menggunakan sistem penampung khusus (Frame berukuran 0x0 tepat di tengah lingkaran) agar rotasi murni pivot di tengah
+local ClockPivot = Instance.new("Frame")
+ClockPivot.Size = UDim2.new(0, 0, 0, 0)
+ClockPivot.Position = UDim2.new(0.5, 0, 0.5, 0)
+ClockPivot.BackgroundTransparency = 1
+ClockPivot.Parent = ClockFrame
+
+local CenterDot = Instance.new("Frame")
+CenterDot.Size = UDim2.new(0, 6, 0, 6)
+CenterDot.Position = UDim2.new(0, -3, 0, -3)
+CenterDot.BackgroundColor3 = ScriptConfig.CyberColor
+CenterDot.BorderSizePixel = 0
+CenterDot.Parent = ClockPivot
+
+-- Jarum Jam Pendek
 local HourHand = Instance.new("Frame")
-HourHand.Size = UDim2.new(0, 2, 0, 25)
-HourHand.AnchorPoint = Vector2.new(0.5, 1)
-HourHand.Position = UDim2.new(0.5, 0, 0.5, 0)
+HourHand.Size = UDim2.new(0, 2, 0, 26)
+HourHand.Position = UDim2.new(0, -1, 0, -26) -- Menggeser base tepat di poros tengah
 HourHand.BackgroundColor3 = ScriptConfig.CyberColor
-HourHand.Parent = ClockFrame
+HourHand.BorderSizePixel = 0
+HourHand.Parent = ClockPivot
 
+-- Jarum Menit Panjang
 local MinuteHand = Instance.new("Frame")
-MinuteHand.Size = UDim2.new(0, 1.5, 0, 40)
-MinuteHand.AnchorPoint = Vector2.new(0.5, 1)
-MinuteHand.Position = UDim2.new(0.5, 0, 0.5, 0)
+MinuteHand.Size = UDim2.new(0, 1.5, 0, 42)
+MinuteHand.Position = UDim2.new(0, -0.75, 0, -42) -- Menggeser base tepat di poros tengah
 MinuteHand.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-MinuteHand.Parent = ClockFrame
+MinuteHand.BorderSizePixel = 0
+MinuteHand.Parent = ClockPivot
 
--- --- LOGIC JARUM JAM BERPUTAR CEPAT ---
+-- --- LOGIC PUTARAN JAM SUPER CEPAT (SMOOTH & FIX SPIN) ---
 task.spawn(function()
     local fakeTime = 0
-    while task.wait(0.01) do -- Interval super cepat
-        fakeTime = fakeTime + 2 -- Kecepatan putaran angka jam
+    while task.wait(0.01) do
+        fakeTime = fakeTime + 3 -- Kecepatan putaran
         HourHand.Rotation = fakeTime
-        MinuteHand.Rotation = fakeTime * 12 -- Jarum menit berputar jauh lebih cepat
+        MinuteHand.Rotation = fakeTime * 12 -- Jarum menit melaju 12 kali lebih cepat layaknya jam asli yang dipercepat
     end
 end)
 
@@ -231,24 +251,24 @@ local InfoText = Instance.new("TextLabel")
 InfoText.Size = UDim2.new(0, 180, 0, 50)
 InfoText.Position = UDim2.new(0, 15, 0, 120)
 InfoText.BackgroundTransparency = 1
-InfoText.Text = "Lock Target: Killer Only\nCamera Anti-Stuck: Active"
+InfoText.Text = "Lock Target: Killer Only\nEngine: Metamethod Ray Hook"
 InfoText.TextColor3 = Color3.fromRGB(120, 150, 180)
 InfoText.TextSize = 12
 InfoText.Font = Enum.Font.Code
 InfoText.TextXAlignment = Enum.TextXAlignment.Left
 InfoText.Parent = MainPanel
 
--- --- FLOATING OPEN / CLOSE BUTTON (Sangat Pas untuk HP) ---
+-- --- FLOATING OPEN / CLOSE BUTTON (MOBILE TOUCH OPTIMIZED) ---
 local OpenCloseBtn = Instance.new("TextButton")
 OpenCloseBtn.Size = UDim2.new(0, 65, 0, 35)
 OpenCloseBtn.Position = UDim2.new(0.1, 0, 0.05, 0)
 OpenCloseBtn.BackgroundColor3 = ScriptConfig.DarkBgColor
 OpenCloseBtn.Font = Enum.Font.Code
-OpenCloseBtn.Text = "MENU"
+OpenCloseBtn.Text = "O P E N / C L O S E"
 OpenCloseBtn.TextColor3 = ScriptConfig.CyberColor
 OpenCloseBtn.TextSize = 12
 OpenCloseBtn.Active = true
-OpenCloseBtn.Draggable = true -- Bisa digeser di layar HP jika mengganggu
+OpenCloseBtn.Draggable = true
 OpenCloseBtn.Parent = CyberGui
 
 local ObjCorner = Instance.new("UICorner")
