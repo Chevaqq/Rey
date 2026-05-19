@@ -1,18 +1,22 @@
--- [[ REYHUB / ACOORNNHUB - MOONWALK FEATURE ]] --
+-- [[ REYHUB / ACOORNNHUB - MOONWALK FIX IN-GAME ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
--- Variabel Fitur
 local moonwalkActive = false
 local moonwalkConnection = nil
 
--- [1] MEMBUAT UI DENGAN INSTANT TOGGLE (TANPA TWEEN)
+-- Hapus UI lama kalau ada biar gak tumpuk
+if CoreGui:FindFirstChild("MoonwalkHub") then
+    CoreGui.MoonwalkHub:Destroy()
+end
+
+-- [1] MEMBUAT UI (Dibuat semirip mungkin dengan video kamu)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MoonwalkHub"
--- Memastikan UI masuk ke CoreGui agar tidak hilang saat reset/mati
 if syn and syn.protect_gui then
     syn.protect_gui(ScreenGui)
     ScreenGui.Parent = CoreGui
@@ -20,99 +24,125 @@ else
     ScreenGui.Parent = CoreGui
 end
 
--- Main Frame (Background Hitam Transparan 0.5)
+-- Main Frame (Hitam Transparan 0.5)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 180, 0, 110)
-MainFrame.Position = UDim2.new(0.8, 0, 0.15, 0) -- Posisi kanan atas layar
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Size = UDim2.new(0, 180, 0, 100)
+MainFrame.Position = UDim2.new(0.65, 0, 0.15, 0) -- Posisi persis seperti di video kamu
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BackgroundTransparency = 0.5
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- Biar bisa digeser di HP
+MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
--- Sudut Melengkung Frame
 local FrameCorner = Instance.new("UICorner")
-FrameCorner.CornerRadius = UDim.new(0, 8)
+FrameCorner.CornerRadius = UDim.new(0, 10) -- Sudut lebih bulat halus
 FrameCorner.Parent = MainFrame
 
 -- Judul Menu
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Size = UDim2.new(1, -30, 0, 35)
+Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
 Title.Text = "MOONWALK MENU"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MainFrame
 
--- Tombol Close (X) di pojok menu
+-- Tombol Close (X)
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 25, 0, 25)
 CloseButton.Position = UDim2.new(1, -30, 0, 5)
 CloseButton.BackgroundTransparency = 1
 CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 70, 70)
-CloseButton.Font = Enum.Font.SourceSansBold
-CloseButton.TextSize = 16
+CloseButton.TextColor3 = Color3.fromRGB(255, 75, 75)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 14
 CloseButton.Parent = MainFrame
 
 -- Tombol Toggle Moonwalk
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 140, 0, 40)
-ToggleBtn.Position = UDim2.new(0.5, -70, 0.5, -10)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Default: Merah (Mati)
+ToggleBtn.Size = UDim2.new(0, 150, 0, 40)
+ToggleBtn.Position = UDim2.new(0.5, -75, 0.5, -5)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60) -- Default: Merah
 ToggleBtn.Text = "STATUS: OFF"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 16
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 13
 ToggleBtn.Parent = MainFrame
 
 local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.CornerRadius = UDim.new(0, 8)
 BtnCorner.Parent = ToggleBtn
 
--- [2] LOGIKA MOONWALK (ANTI-STUCK / RESPONSif)
-local function ToggleMoonwalk()
-    moonwalkActive = not moonwalkActive
+-- [2] LOGIKA UTAMA MOONWALK (IKUTI KAMERA + ANTI RESET IN-GAME)
+local function StartMoonwalk()
+    if moonwalkConnection then moonwalkConnection:Disconnect() end
     
-    if moonwalkActive then
-        ToggleBtn.Text = "STATUS: ON"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 205, 50) -- Hijau saat Aktif
-        
-        moonwalkConnection = RunService.RenderStepped:Connect(function()
-            local char = LocalPlayer.Character
-            if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                local root = char:FindFirstChild("HumanoidRootPart")
+    moonwalkConnection = RunService.RenderStepped:Connect(function()
+        local char = LocalPlayer.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local root = char:FindFirstChild("HumanoidRootPart")
+            
+            if hum and root then
+                -- MATIKAN AUTOROTATE GAME: Supaya script game gak maksa badan madep depan
+                hum.AutoRotate = false
                 
-                -- Hanya berputar kalau karakter sedang bergerak (biar kamera gak stuck/ngebug)
-                if hum and root and hum.MoveDirection.Magnitude > 0 then
-                    local moveDir = hum.MoveDirection
-                    -- Memaksa HRP menghadap kebalikan arah jalan
-                    root.CFrame = CFrame.new(root.Position, root.Position - moveDir)
+                -- Cek apakah karakter lagi jalan (pake analog/WAsD)
+                if hum.MoveDirection.Magnitude > 0 then
+                    -- Ambil arah hadap kamera saat ini
+                    local lookVector = Camera.CFrame.LookVector
+                    -- Balikkan arah CFrame (Kamera depan = Karakter madep belakang)
+                    root.CFrame = CFrame.new(root.Position, root.Position - Vector3.new(lookVector.X, 0, lookVector.Z))
                 end
             end
-        end)
-    else
-        ToggleBtn.Text = "STATUS: OFF"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Merah saat Mati
-        
-        if moonwalkConnection then
-            moonwalkConnection:Disconnect()
-            moonwalkConnection = nil
+        end
+    end)
+end
+
+local function StopMoonwalk()
+    if moonwalkConnection then
+        moonwalkConnection:Disconnect()
+        moonwalkConnection = nil
+    end
+    
+    -- Kembalikan fungsi AutoRotate normal game jika dimatikan
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.AutoRotate = true
         end
     end
 end
 
--- [3] ASSIGN FUNGSI TOMBOL
-ToggleBtn.MouseButton1Click:Connect(ToggleMoonwalk)
-
--- Fungsi Close UI secara instan (langsung hancur tanpa jeda/animasi)
-CloseButton.MouseButton1Click:Connect(function()
-    if moonwalkConnection then
-        moonwalkConnection:Disconnect()
+-- Fitur Auto-Reattach saat Karakter Reset/Spawn Baru di In-Game
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    task.wait(0.5) -- Beri jeda loading game saat masuk map
+    if moonwalkActive then
+        StartMoonwalk()
     end
+end)
+
+-- [3] ACTIONS
+ToggleBtn.MouseButton1Click:Connect(function()
+    moonwalkActive = not moonwalkActive
+    if moonwalkActive then
+        ToggleBtn.Text = "STATUS: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60) -- Hijau
+        StartMoonwalk()
+    else
+        ToggleBtn.Text = "STATUS: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60) -- Merah
+        StopMoonwalk()
+    end
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    StopMoonwalk()
     ScreenGui:Destroy()
 end)
