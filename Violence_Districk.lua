@@ -41,12 +41,14 @@ local settings = {
 local function saveSettings()
 	local dataFile = "ViolenceDistrictSettings.json"
 	-- Simpan ke file lokal (untuk executor yang support)
-	writefile(dataFile, game:GetService("HttpService"):JSONEncode(settings))
+	if writefile then
+		writefile(dataFile, game:GetService("HttpService"):JSONEncode(settings))
+	end
 end
 
 local function loadSettings()
 	local dataFile = "ViolenceDistrictSettings.json"
-	if isfile(dataFile) then
+	if isfile and isfile(dataFile) then
 		local data = game:GetService("HttpService"):JSONDecode(readfile(dataFile))
 		for k, v in pairs(data) do
 			if settings[k] ~= nil then
@@ -58,8 +60,6 @@ end
 
 -- ==================== LOADING SCREEN ====================
 local function showLoadingScreen()
-	local screenSize = playerGui.AbsoluteSize
-	
 	local loadingGui = Instance.new("ScreenGui")
 	loadingGui.Name = "LoadingScreen"
 	loadingGui.ResetOnSpawn = false
@@ -472,6 +472,7 @@ local function createMainMenu()
 			toggle.BackgroundColor3 = settings[settingKey] and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 100, 150)
 			toggle.Text = settings[settingKey] and "ON" or "OFF"
 			executeFeature(settingKey, settings[settingKey])
+			saveSettings()
 		end)
 
 		return container
@@ -530,6 +531,7 @@ local function createMainMenu()
 				settings[settingKey] = val
 				valueInput.Text = tostring(val)
 				executeFeature(settingKey, val)
+				saveSettings()
 			end
 		end)
 
@@ -570,7 +572,7 @@ local function createMainMenu()
 		modeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		modeBtn.TextSize = 14
 		modeBtn.Font = Enum.Font.GothamBold
-		modeBtn.Text = "Mode: 1"
+		modeBtn.Text = "Mode: " .. settings.aimPrediction
 		modeBtn.BorderSizePixel = 0
 		modeBtn.Parent = container
 
@@ -582,6 +584,7 @@ local function createMainMenu()
 		modeBtn.MouseButton1Click:Connect(function()
 			settings.aimPrediction = settings.aimPrediction % 3 + 1
 			modeBtn.Text = "Mode: " .. settings.aimPrediction
+			saveSettings()
 		end)
 
 		return container
@@ -638,63 +641,4 @@ local function createMainMenu()
 
 		if currentTab == "Main" then
 			addToggle(scrollFrame, "Instant Heal", false)
-		elseif currentTab == "Survivor" then
-			addSlider(scrollFrame, "Walk Speed", 0, 100, 16)
-			addSlider(scrollFrame, "Camera Distance", 0, 200, 70)
-		elseif currentTab == "Killer" then
-			addToggle(scrollFrame, "No Slow", false)
-			addToggle(scrollFrame, "Infinite Basic Stack", false)
-			addToggle(scrollFrame, "Infinite Abilities", true)
-		elseif currentTab == "Combat" then
-			addToggle(scrollFrame, "Twist Of Fate", false)
-			addSlider(scrollFrame, "FOV", 1, 100, 20)
-			addSlider(scrollFrame, "Fast Vault", 1, 6, 1)
-			addPredictionSelector(scrollFrame, "Aim Prediction")
-		elseif currentTab == "Visual" then
-			addToggle(scrollFrame, "Chams Killer", false)
-			addToggle(scrollFrame, "Chams Survivor", false)
-			addToggle(scrollFrame, "Chams Generator", false)
-			addToggle(scrollFrame, "Lines", false)
-		elseif currentTab == "Misc" then
-			addToggle(scrollFrame, "Potato Graphics", false)
-			addToggle(scrollFrame, "Anti Admin", false)
-			addToggle(scrollFrame, "Anti Fling", false)
-			addToggle(scrollFrame, "Save/Load Settings", false)
-			addToggle(scrollFrame, "Headless", false)
-			addToggle(scrollFrame, "Korblox", false)
-		end
-	end
-
-	updateContentPanel()
-
-	-- Close/Open Menu with Delete key
-	UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then return end
-		if input.KeyCode == Enum.KeyCode.Delete then
-			menuOpen = not menuOpen
-			mainContainer.Visible = menuOpen
-		end
-	end)
-
-	mainMenuGui = menuGui
-	return menuGui
-end
-
--- ==================== MAIN EXECUTION ====================
-showLoadingScreen()
-wait(1)
-showKeyScreen()
-
--- Wait for login
-while not isLoggedIn do
-	wait(0.1)
-end
-
--- Create main menu
-local mainMenu = createMainMenu()
-menuOpen = true
-
-print("✓ Violence District Script Loaded!")
-print("✓ User: " .. currentUser .. (isVIP and " [VIP]" or " [FREE]"))
-print("✓ Press DELETE to toggle menu")
-print("✓ All features ready to use!")
+		else
