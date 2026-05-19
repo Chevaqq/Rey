@@ -1,204 +1,118 @@
--- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V13 (ZENTAZZ REPLICA) ]] --
+-- [[ REYHUB / ACOORNNHUB - MOONWALK FEATURE ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 
--- State Target
-local CurrentTarget = nil
+-- Variabel Fitur
+local moonwalkActive = false
+local moonwalkConnection = nil
 
--- Konfigurasi Fitur Utama (Sesuai Video)
-local Config = {
-    ChamsSurvivor = true,     -- ESP Siluet Hijau pada Survivor
-    SilentAimVeil = true,     -- Pembelokan Proyektil Otomatis (Anti-Miss)
-    PredictSpeed = 850        -- Kalkulasi kecepatan tombak game Violence District
-}
-
--- [[ UI SYSTEM SIMPLE (TRANSPARAN & OPEN/CLOSE) ]] --
+-- [1] MEMBUAT UI DENGAN INSTANT TOGGLE (TANPA TWEEN)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ReyHub_ViolenceDistrict_V13"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Name = "MoonwalkHub"
+-- Memastikan UI masuk ke CoreGui agar tidak hilang saat reset/mati
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = CoreGui
+end
 
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 90, 0, 35)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleBtn.BackgroundTransparency = 0.3
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
-ToggleBtn.Text = "CLOSE"
-ToggleBtn.TextSize = 14
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = ScreenGui
-
+-- Main Frame (Background Hitam Transparan 0.5)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 160)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -80)
-MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 180, 0, 110)
+MainFrame.Position = UDim2.new(0.8, 0, 0.15, 0) -- Posisi kanan atas layar
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BackgroundTransparency = 0.5
-MainFrame.BorderSizePixel = 2
-MainFrame.BorderColor3 = Color3.fromRGB(0, 255, 255)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Biar bisa digeser di HP
 MainFrame.Parent = ScreenGui
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    ToggleBtn.Text = MainFrame.Visible and "CLOSE" or "OPEN"
-end)
+-- Sudut Melengkung Frame
+local FrameCorner = Instance.new("UICorner")
+FrameCorner.CornerRadius = UDim.new(0, 8)
+FrameCorner.Parent = MainFrame
 
+-- Judul Menu
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Text = "ZENTAZZ REPLICA V13"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "MOONWALK MENU"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 16
-Title.BackgroundTransparency = 1
+Title.TextSize = 14
 Title.Parent = MainFrame
 
-local function CreateToggle(name, pos, configKey)
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0, 240, 0, 35)
-    Btn.Position = pos
-    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    Btn.Text = name .. " : ON"
-    Btn.TextColor3 = Color3.fromRGB(50, 255, 50)
-    Btn.Font = Enum.Font.SourceSansBold
-    Btn.TextSize = 14
-    Btn.Parent = MainFrame
+-- Tombol Close (X) di pojok menu
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 25, 0, 25)
+CloseButton.Position = UDim2.new(1, -30, 0, 5)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 70, 70)
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.TextSize = 16
+CloseButton.Parent = MainFrame
 
-    Btn.MouseButton1Click:Connect(function()
-        Config[configKey] = not Config[configKey]
-        Btn.Text = name .. (Config[configKey] and " : ON" or " : OFF")
-        Btn.TextColor3 = Config[configKey] and Color3.fromRGB(50, 255, 50) or Color3.fromRGB(255, 50, 50)
-    end)
-end
+-- Tombol Toggle Moonwalk
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 140, 0, 40)
+ToggleBtn.Position = UDim2.new(0.5, -70, 0.5, -10)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Default: Merah (Mati)
+ToggleBtn.Text = "STATUS: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 16
+ToggleBtn.Parent = MainFrame
 
-CreateToggle("CHAMS SURVIVOR (GREEN)", UDim2.new(0.5, -120, 0.35, 0), "ChamsSurvivor")
-CreateToggle("SILENT AIM VEIL (LASER)", UDim2.new(0.5, -120, 0.65, 0), "SilentAimVeil")
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = ToggleBtn
 
-
--- [[ UTILITIES DETEKSI SURVIVOR ]] --
-local function IsSurvivor(player)
-    if player ~= LocalPlayer and player:GetAttribute("Role") ~= "Killer" and not player.Name:lower():find("killer") then
-        return true
-    end
-    return false
-end
-
-local function GetClosestSurvivor()
-    local Target = nil
-    local ShortestDistance = math.huge
-
-    for _, v in pairs(Players:GetPlayers()) do
-        if IsSurvivor(v) and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-            local Humanoid = v.Character:FindFirstChildOfClass("Humanoid")
-            if Humanoid and Humanoid.Health > 0 then
-                local ScreenPos, OnScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
-                if OnScreen then
-                    local MousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                    local Mag = (Vector2.new(ScreenPos.X, ScreenPos.Y) - MousePos).Magnitude
-                    if Mag < ShortestDistance then
-                        ShortestDistance = Mag
-                        Target = v
-                    end
+-- [2] LOGIKA MOONWALK (ANTI-STUCK / RESPONSif)
+local function ToggleMoonwalk()
+    moonwalkActive = not moonwalkActive
+    
+    if moonwalkActive then
+        ToggleBtn.Text = "STATUS: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 205, 50) -- Hijau saat Aktif
+        
+        moonwalkConnection = RunService.RenderStepped:Connect(function()
+            local char = LocalPlayer.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                local root = char:FindFirstChild("HumanoidRootPart")
+                
+                -- Hanya berputar kalau karakter sedang bergerak (biar kamera gak stuck/ngebug)
+                if hum and root and hum.MoveDirection.Magnitude > 0 then
+                    local moveDir = hum.MoveDirection
+                    -- Memaksa HRP menghadap kebalikan arah jalan
+                    root.CFrame = CFrame.new(root.Position, root.Position - moveDir)
                 end
             end
+        end)
+    else
+        ToggleBtn.Text = "STATUS: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Merah saat Mati
+        
+        if moonwalkConnection then
+            moonwalkConnection:Disconnect()
+            moonwalkConnection = nil
         end
     end
-    return Target
 end
 
--- [[ REPLIKA 2D GRAPHICS LASER TRACER (SISTEM RINGAN HP) ]] --
-local CanvasGui = Instance.new("Folder", ScreenGui)
-CanvasGui.Name = "Zentazz_Tracers"
+-- [3] ASSIGN FUNGSI TOMBOL
+ToggleBtn.MouseButton1Click:Connect(ToggleMoonwalk)
 
-local function DrawLaserTracer(startPos3D, endPos3D)
-    local LineFrame = Instance.new("Frame", CanvasGui)
-    LineFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Warna Hijau Tebal persis di video kamu
-    LineFrame.BorderSizePixel = 0
-    LineFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-
-    local Connection
-    Connection = RunService.RenderStepped:Connect(function()
-        if not LineFrame or not LineFrame.Parent then return end
-        local StartPos, StartOnScreen = Camera:WorldToViewportPoint(startPos3D)
-        local EndPos, EndOnScreen = Camera:WorldToViewportPoint(endPos3D)
-
-        if StartOnScreen and EndOnScreen then
-            local Distance = (Vector2.new(EndPos.X, EndPos.Y) - Vector2.new(StartPos.X, StartPos.Y)).Magnitude
-            local Angle = math.atan2(EndPos.Y - StartPos.Y, EndPos.X - StartPos.X)
-
-            LineFrame.Size = UDim2.new(0, Distance, 0, 4) -- Ketebalan 4px agar terlihat tegas seperti laser
-            LineFrame.Position = UDim2.new(0, (StartPos.X + EndPos.X) / 2, 0, (StartPos.Y + EndPos.Y) / 2)
-            LineFrame.Rotation = math.deg(Angle)
-            LineFrame.Visible = true
-        else
-            LineFrame.Visible = false
-        end
-    end)
-    
-    -- Durasi kilatan laser saat tombak dilempar (0.12 detik lalu hancur agar tidak lag)
-    task.delay(0.12, function()
-        Connection:Disconnect()
-        LineFrame:Destroy()
-    end)
-end
-
-
--- [[ MAIN LOOP ENGINE ]] --
-RunService.RenderStepped:Connect(function()
-    CurrentTarget = GetClosestSurvivor()
-
-    -- 1. VISUAL ESP CHAMS (SILUET HIJAU TRANSURAN)
-    for _, p in pairs(Players:GetPlayers()) do
-        if IsSurvivor(p) and p.Character then
-            local Highlight = p.Character:FindFirstChildOfClass("Highlight")
-            if Config.ChamsSurvivor then
-                if not Highlight then Highlight = Instance.new("Highlight", p.Character) end
-                Highlight.FillColor = Color3.fromRGB(0, 255, 0)
-                Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                Highlight.FillTransparency = 0.5
-                Highlight.OutlineTransparency = 0
-            else
-                if Highlight then Highlight:Destroy() end
-            end
-        end
+-- Fungsi Close UI secara instan (langsung hancur tanpa jeda/animasi)
+CloseButton.MouseButton1Click:Connect(function()
+    if moonwalkConnection then
+        moonwalkConnection:Disconnect()
     end
-end)
-
-
--- [[ METAMETHOD INTERCEPTION (VEIL CORE PREDICTION & ANTI-MISS) ]] --
-local OldNamecall
-OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
-    local Args = {...}
-    local Method = getnamecallmethod()
-
-    -- Mendeteksi pemanggilan sistem tembakan/lemparan game
-    if Config.SilentAimVeil and not checkcaller() and (Method == "Raycast" or Method == "FindPartOnRayWithIgnoreList") then
-        if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-            local TargetRoot = CurrentTarget.Character.HumanoidRootPart
-            local MyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            
-            -- ALGORITMA PREDIKSI VEKTOR GERAKAN MUSUH
-            -- Menghitung jarak, waktu tempuh proyektil, dan arah lari musuh secara matematis
-            local Distance = (TargetRoot.Position - Camera.CFrame.Position).Magnitude
-            local TimeToHit = Distance / Config.PredictSpeed
-            local PredictedPos = TargetRoot.Position + (TargetRoot.AssemblyLinearVelocity * TimeToHit) + Vector3.new(0, 0.2, 0)
-
-            -- MEMANCARKAN LASER TRACER HIJAU (Seketika saat serangan dilepas seperti di video)
-            if MyRoot then
-                task.spawn(function()
-                    DrawLaserTracer(MyRoot.Position, PredictedPos)
-                end)
-            end
-
-            -- MODIFIKASI JALUR TEMBAKAN SERVER (Memaksa Tombak Jatuh ke Titik Prediksi Target)
-            if Method == "Raycast" and typeof(Args[1]) == "Vector3" and typeof(Args[2]) == "Vector3" then
-                Args[2] = (PredictedPos - Args[1]).Unit * 9999
-            elseif Args[1] and typeof(Args[1]) == "Ray" then
-                Args[1] = Ray.new(Args[1].Origin, (PredictedPos - Args[1].Origin).Unit * 9999)
-            end
-        end
-    end
-    return OldNamecall(Self, unpack(Args))
+    ScreenGui:Destroy()
 end)
