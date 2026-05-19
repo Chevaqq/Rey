@@ -1,4 +1,4 @@
--- [[ REYHUB / ACOORNNHUB - MOONWALK FIX IN-GAME ]] --
+-- [[ REYHUB / ACOORNNHUB - ZENTAZZ MOONWALK STYLE ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -7,16 +7,17 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local moonwalkActive = false
+local currentMode = 1 -- Default Mode 1 seperti di video
 local moonwalkConnection = nil
 
--- Hapus UI lama kalau ada biar gak tumpuk
-if CoreGui:FindFirstChild("MoonwalkHub") then
-    CoreGui.MoonwalkHub:Destroy()
+-- Hapus UI lama jika ada
+if CoreGui:FindFirstChild("ZentazzMoonwalk") then
+    CoreGui.ZentazzMoonwalk:Destroy()
 end
 
--- [1] MEMBUAT UI (Dibuat semirip mungkin dengan video kamu)
+-- [1] SETUP SCREEN GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MoonwalkHub"
+ScreenGui.Name = "ZentazzMoonwalk"
 if syn and syn.protect_gui then
     syn.protect_gui(ScreenGui)
     ScreenGui.Parent = CoreGui
@@ -24,62 +25,87 @@ else
     ScreenGui.Parent = CoreGui
 end
 
--- Main Frame (Hitam Transparan 0.5)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 180, 0, 100)
-MainFrame.Position = UDim2.new(0.65, 0, 0.15, 0) -- Posisi persis seperti di video kamu
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-MainFrame.BackgroundTransparency = 0.5
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+-- ==========================================
+-- TOMBOL OPEN / CLOSE (Tombol Kecil Utama)
+-- ==========================================
+local OpenCloseBtn = Instance.new("TextButton")
+OpenCloseBtn.Name = "OpenCloseBtn"
+OpenCloseBtn.Size = UDim2.new(0, 70, 0, 30)
+OpenCloseBtn.Position = UDim2.new(0.85, 0, 0.05, 0) -- Posisi pojok kanan atas layar
+OpenCloseBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+OpenCloseBtn.BackgroundTransparency = 0.3
+OpenCloseBtn.Text = "MOONWALK"
+OpenCloseBtn.TextColor3 = Color3.fromRGB(255, 215, 0) -- Warna kuning gold khas menu
+OpenCloseBtn.Font = Enum.Font.GothamBold
+OpenCloseBtn.TextSize = 11
+OpenCloseBtn.Parent = ScreenGui
+OpenCloseBtn.Draggable = true
 
-local FrameCorner = Instance.new("UICorner")
-FrameCorner.CornerRadius = UDim.new(0, 10) -- Sudut lebih bulat halus
-FrameCorner.Parent = MainFrame
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 6)
+OpenCorner.Parent = OpenCloseBtn
+
+-- ==========================================
+-- MENU UTAMA MOONWALK (Awalnya Sembunyi)
+-- ==========================================
+local MainMenu = Instance.new("Frame")
+MainMenu.Name = "MainMenu"
+MainMenu.Size = UDim2.new(0, 160, 0, 130)
+MainMenu.Position = UDim2.new(0.80, 0, 0.12, 0)
+MainMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainMenu.BackgroundTransparency = 0.5 -- Transparan 0.5 sesuai seleramu
+MainMenu.BorderSizePixel = 0
+MainMenu.Visible = false -- Tersembunyi dulu, baru muncul kalau tombol utama diklik
+MainMenu.Draggable = true
+MainMenu.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainMenu
 
 -- Judul Menu
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -30, 0, 35)
-Title.Position = UDim2.new(0, 10, 0, 0)
+Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundTransparency = 1
 Title.Text = "MOONWALK MENU"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 12
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainFrame
+Title.TextSize = 11
+Title.Parent = MainMenu
 
--- Tombol Close (X)
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 25, 0, 25)
-CloseButton.Position = UDim2.new(1, -30, 0, 5)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 75, 75)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.TextSize = 14
-CloseButton.Parent = MainFrame
+-- Tombol Toggle ON/OFF (Tombol Start/Stop di Video)
+local StartBtn = Instance.new("TextButton")
+StartBtn.Size = UDim2.new(0, 130, 0, 32)
+StartBtn.Position = UDim2.new(0.5, -65, 0, 35)
+StartBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60) -- Merah pas OFF
+StartBtn.Text = "START"
+StartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+StartBtn.Font = Enum.Font.GothamBold
+StartBtn.TextSize = 12
+StartBtn.Parent = MainMenu
 
--- Tombol Toggle Moonwalk
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 150, 0, 40)
-ToggleBtn.Position = UDim2.new(0.5, -75, 0.5, -5)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60) -- Default: Merah
-ToggleBtn.Text = "STATUS: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 13
-ToggleBtn.Parent = MainFrame
+local StartCorner = Instance.new("UICorner")
+StartCorner.CornerRadius = UDim.new(0, 6)
+StartCorner.Parent = StartBtn
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 8)
-BtnCorner.Parent = ToggleBtn
+-- Tombol Ganti Mode (Mode 1 / Mode 2)
+local ModeBtn = Instance.new("TextButton")
+ModeBtn.Size = UDim2.new(0, 130, 0, 32)
+ModeBtn.Position = UDim2.new(0.5, -65, 0, 75)
+ModeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ModeBtn.Text = "MODE: 1"
+ModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ModeBtn.Font = Enum.Font.GothamBold
+ModeBtn.TextSize = 12
+ModeBtn.Parent = MainMenu
 
--- [2] LOGIKA UTAMA MOONWALK (IKUTI KAMERA + ANTI RESET IN-GAME)
-local function StartMoonwalk()
+local ModeCorner = Instance.new("UICorner")
+ModeCorner.CornerRadius = UDim.new(0, 6)
+ModeCorner.Parent = ModeBtn
+
+
+-- [2] LOGIKA PERGERAKAN MOONWALK ZENTAZZ STYLE
+local function ApplyMoonwalk()
     if moonwalkConnection then moonwalkConnection:Disconnect() end
     
     moonwalkConnection = RunService.RenderStepped:Connect(function()
@@ -89,60 +115,88 @@ local function StartMoonwalk()
             local root = char:FindFirstChild("HumanoidRootPart")
             
             if hum and root then
-                -- MATIKAN AUTOROTATE GAME: Supaya script game gak maksa badan madep depan
                 hum.AutoRotate = false
                 
-                -- Cek apakah karakter lagi jalan (pake analog/WAsD)
                 if hum.MoveDirection.Magnitude > 0 then
-                    -- Ambil arah hadap kamera saat ini
                     local lookVector = Camera.CFrame.LookVector
-                    -- Balikkan arah CFrame (Kamera depan = Karakter madep belakang)
-                    root.CFrame = CFrame.new(root.Position, root.Position - Vector3.new(lookVector.X, 0, lookVector.Z))
+                    local moveDir = hum.MoveDirection
+                    
+                    -- Kalkulasi apakah analog ditekan maju atau mundur relatif terhadap kamera
+                    local dotProduct = moveDir:Dot(Vector3.new(lookVector.X, 0, lookVector.Z).Unit)
+                    
+                    if currentMode == 1 then
+                        -- MODE 1: Karakter selalu dipaksa menghadap ke belakang kamera (Mundur total)
+                        root.CFrame = CFrame.new(root.Position, root.Position - Vector3.new(lookVector.X, 0, lookVector.Z))
+                    elseif currentMode == 2 then
+                        -- MODE 2: Responsif bolak-balik (Maju jadi mundur, mundur jadi maju)
+                        if dotProduct > 0 then
+                            -- Jika analog ditekan maju, badan menghadap ke belakang
+                            root.CFrame = CFrame.new(root.Position, root.Position - Vector3.new(lookVector.X, 0, lookVector.Z))
+                        else
+                            -- Jika analog ditekan mundur, badan menghadap ke depan kamera
+                            root.CFrame = CFrame.new(root.Position, root.Position + Vector3.new(lookVector.X, 0, lookVector.Z))
+                        end
+                    end
                 end
             end
         end
     end)
 end
 
-local function StopMoonwalk()
+local function RemoveMoonwalk()
     if moonwalkConnection then
         moonwalkConnection:Disconnect()
         moonwalkConnection = nil
     end
-    
-    -- Kembalikan fungsi AutoRotate normal game jika dimatikan
     local char = LocalPlayer.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.AutoRotate = true
-        end
+        if hum then hum.AutoRotate = true end
     end
 end
 
--- Fitur Auto-Reattach saat Karakter Reset/Spawn Baru di In-Game
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    task.wait(0.5) -- Beri jeda loading game saat masuk map
+-- Auto-On kembali jika karakter respawn/masuk match baru
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
     if moonwalkActive then
-        StartMoonwalk()
+        ApplyMoonwalk()
     end
 end)
 
--- [3] ACTIONS
-ToggleBtn.MouseButton1Click:Connect(function()
+
+-- [3] PENGATURAN TOMBOL UI (INTERAKSI)
+
+-- Fungsi Open / Close Menu Utama (Instant tanpa transisi tween)
+OpenCloseBtn.MouseButton1Click:Connect(function()
+    MainMenu.Visible = not MainMenu.Visible
+end)
+
+-- Tombol Start / Stop Moonwalk
+StartBtn.MouseButton1Click:Connect(function()
     moonwalkActive = not moonwalkActive
     if moonwalkActive then
-        ToggleBtn.Text = "STATUS: ON"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60) -- Hijau
-        StartMoonwalk()
+        StartBtn.Text = "STOP"
+        StartBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60) -- Hijau saat aktif
+        ApplyMoonwalk()
     else
-        ToggleBtn.Text = "STATUS: OFF"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60) -- Merah
-        StopMoonwalk()
+        StartBtn.Text = "START"
+        StartBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60) -- Merah saat mati
+        RemoveMoonwalk()
     end
 end)
 
-CloseButton.MouseButton1Click:Connect(function()
-    StopMoonwalk()
-    ScreenGui:Destroy()
+-- Tombol Switch Mode (Mode 1 / Mode 2)
+ModeBtn.MouseButton1Click:Connect(function()
+    if currentMode == 1 then
+        currentMode = 2
+        ModeBtn.Text = "MODE: 2"
+    else
+        currentMode = 1
+        ModeBtn.Text = "MODE: 1"
+    end
+    
+    -- Update instan jika moonwalk sedang menyala
+    if moonwalkActive then
+        ApplyMoonwalk()
+    end
 end)
