@@ -1,32 +1,30 @@
 -- =================================================================
--- VIOLENCE DISTRICT - CYBERPUNK SILENT AIM SCRIPT
--- RUN WITH DELTA EXECUTOR
+-- VIOLENCE DISTRICT - SILENT AIM V2 (NO CAMERA STUCK)
+-- RUN WITH DELTA EXECUTOR // MOBILE OPTIMIZED
 -- =================================================================
 
-local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
 -- --- CONFIGURATION & STATES ---
 local ScriptConfig = {
     SilentAimEnabled = true,
-    TargetTeamName = "Killers", -- Ganti sesuai nama tim Killer di game jika ada sistem tim resmi
+    TargetTeamName = "Killers",
     CyberColor = Color3.fromRGB(0, 180, 255),
     DarkBgColor = Color3.fromRGB(10, 16, 26)
 }
 
--- --- CUSTOM TARGET LOOKUP FOR KILLER ---
--- Fungsi khusus untuk mendeteksi Killer berdasarkan item atau kondisi di Violence District
+-- --- DETEKSI TARGET (LOCK KILLER ONLY) ---
 local function IsKiller(player)
     if player == LocalPlayer then return false end
     
-    -- 1. Berdasarkan Tim (Jika game memakai sistem Team)
+    -- 1. Deteksi lewat sistem Team
     if player.Team and (player.Team.Name:lower():find("killer") or player.Team.Name:lower():find("slasher")) then
         return true
     end
     
-    -- 2. Berdasarkan Tool/Senjata yang dipegang (e.g. Pisau/Gergaji)
+    -- 2. Deteksi alternatif jika memegang senjata Killer (Pisau, dll)
     local character = player.Character
     if character then
         for _, item in pairs(character:GetChildren()) do
@@ -39,8 +37,7 @@ local function IsKiller(player)
     return false
 end
 
--- --- SILENT AIM CORE ENGINE ---
--- Mendapatkan target Killer terdekat yang posisinya valid
+-- --- MENCARI KILLER TERDEKAT ---
 local function GetClosestKiller()
     local closestTarget = nil
     local shortestDistance = math.huge
@@ -52,7 +49,6 @@ local function GetClosestKiller()
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             
             if rootPart and humanoid and humanoid.Health > 0 then
-                -- Hitung jarak antara karakter kita dan Killer
                 local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 if myRoot then
                     local distance = (rootPart.Position - myRoot.Position).Magnitude
@@ -67,47 +63,38 @@ local function GetClosestKiller()
     return closestTarget
 end
 
--- Hooking system tembakan via Namecall (Metamethod Hooking)
--- Tetap mendeteksi target meskipun peluru diarahkan ke tempat lain (tembak angin)
+-- --- SILENT AIM ENGINE V2 (INDEX HOOK) ---
+-- Mengubah target mouse secara internal tanpa merusak koordinat kamera utama
 local gmt = getrawmetatable(game)
 setreadonly(gmt, false)
-local oldNamecall = gmt.__namecall
+local oldIndex = gmt.__index
 
-gmt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    
-    if ScriptConfig.SilentAimEnabled and (method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" or method == "Raycast") then
+gmt.__index = newcclosure(function(self, index)
+    if self == Mouse and ScriptConfig.SilentAimEnabled and (index == "Hit" or index == "Target") then
         local targetPart = GetClosestKiller()
         if targetPart then
-            -- Membelokkan arah vector peluru langsung menuju posisi kepala/badan Killer target
-            if method == "Raycast" then
-                local origin = args[1]
-                args[2] = (targetPart.Position - origin).Unit * 1000
-            else
-                local origin = args[1].Origin
-                args[1] = Ray.new(origin, (targetPart.Position - origin).Unit * 1000)
+            if index == "Hit" then
+                return targetPart.CFrame
+            elseif index == "Target" then
+                return targetPart
             end
-            return oldNamecall(self, unpack(args))
         end
     end
-    return oldNamecall(self, ...)
+    return oldIndex(self, index)
 end)
 setreadonly(gmt, true)
 
 
 -- =================================================================
--- MODERN CYBERPUNK UI GENERATOR (DARK BLUE WITH ANALOG CLOCK)
+-- MODERN CYBERPUNK UI GENERATOR WITH FAST SPINNING CLOCK
 -- =================================================================
 
--- Destroy GUI lama jika sengaja di-execute ulang
-if game.CoreGui:FindFirstChild("CyberHub_ViolenceDistrict") then
-    game.CoreGui["CyberHub_ViolenceDistrict"]:Destroy()
+if game.CoreGui:FindFirstChild("CyberHub_ViolenceDistrict_V2") then
+    game.CoreGui["CyberHub_ViolenceDistrict_V2"]:Destroy()
 end
 
--- --- SCREEN GUI ---
 local CyberGui = Instance.new("ScreenGui")
-CyberGui.Name = "CyberHub_ViolenceDistrict"
+CyberGui.Name = "CyberHub_ViolenceDistrict_V2"
 CyberGui.Parent = game.CoreGui
 CyberGui.ResetOnSpawn = false
 
@@ -123,7 +110,6 @@ MainPanel.Active = true
 MainPanel.Draggable = true
 MainPanel.Parent = CyberGui
 
--- Cyber Border Glow Effect
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Color = ScriptConfig.CyberColor
 UIStroke.Thickness = 2
@@ -135,11 +121,10 @@ UICorner.Parent = MainPanel
 
 -- --- TITLE BAR ---
 local Title = Instance.new("TextLabel")
-Title.Name = "Title"
 Title.Size = UDim2.new(1, -20, 0, 35)
 Title.Position = UDim2.new(0, 15, 0, 5)
 Title.BackgroundTransparency = 1
-Title.Text = "CYBER HUB // DISTR_VIOLENCE"
+Title.Text = "CYBER HUB // SILENT_AIM_V2"
 Title.TextColor3 = ScriptConfig.CyberColor
 Title.TextSize = 16
 Title.Font = Enum.Font.Code
@@ -148,16 +133,14 @@ Title.Parent = MainPanel
 
 -- --- ANALOG CYBER CLOCK BACKGROUND ---
 local ClockFrame = Instance.new("Frame")
-ClockFrame.Name = "AnalogClock"
 ClockFrame.Size = UDim2.new(0, 110, 0, 110)
 ClockFrame.Position = UDim2.new(1, -130, 0.5, -45)
 ClockFrame.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
 ClockFrame.BackgroundTransparency = 0.6
-ClockFrame.BorderSizePixel = 0
 ClockFrame.Parent = MainPanel
 
 local ClockCorner = Instance.new("UICorner")
-ClockCorner.CornerRadius = UDim.new(1, 0) -- Circle shape
+ClockCorner.CornerRadius = UDim.new(1, 0)
 ClockCorner.Parent = ClockFrame
 
 local ClockStroke = Instance.new("UIStroke")
@@ -165,15 +148,13 @@ ClockStroke.Color = ScriptConfig.CyberColor
 ClockStroke.Thickness = 1
 ClockStroke.Parent = ClockFrame
 
--- Center Dot for Clock
 local CenterDot = Instance.new("Frame")
 CenterDot.Size = UDim2.new(0, 6, 0, 6)
 CenterDot.Position = UDim2.new(0.5, -3, 0.5, -3)
 CenterDot.BackgroundColor3 = ScriptConfig.CyberColor
-CenterDot.BorderSizePixel = 0
 CenterDot.Parent = ClockFrame
 
--- Generate Numbers (12, 3, 6, 9) inside Cyber Clock
+-- Angka Jam
 local clockNumbers = {["12"] = UDim2.new(0.5, -10, 0, 5), ["3"] = UDim2.new(1, -15, 0.5, -7), ["6"] = UDim2.new(0.5, -10, 1, -20), ["9"] = UDim2.new(0, 5, 0.5, -7)}
 for numStr, pos in pairs(clockNumbers) do
     local numLabel = Instance.new("TextLabel")
@@ -187,13 +168,12 @@ for numStr, pos in pairs(clockNumbers) do
     numLabel.Parent = ClockFrame
 end
 
--- Clock Hands (Jarum Jam & Menit)
+-- Jarum Jam & Menit
 local HourHand = Instance.new("Frame")
 HourHand.Size = UDim2.new(0, 2, 0, 25)
 HourHand.AnchorPoint = Vector2.new(0.5, 1)
 HourHand.Position = UDim2.new(0.5, 0, 0.5, 0)
 HourHand.BackgroundColor3 = ScriptConfig.CyberColor
-HourHand.BorderSizePixel = 0
 HourHand.Parent = ClockFrame
 
 local MinuteHand = Instance.new("Frame")
@@ -201,24 +181,20 @@ MinuteHand.Size = UDim2.new(0, 1.5, 0, 40)
 MinuteHand.AnchorPoint = Vector2.new(0.5, 1)
 MinuteHand.Position = UDim2.new(0.5, 0, 0.5, 0)
 MinuteHand.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-MinuteHand.BorderSizePixel = 0
 MinuteHand.Parent = ClockFrame
 
--- Thread Logic untuk Update Jarum Jam Real-time
-spawn(function()
-    while task.wait(1) do
-        local date = os.date("*t")
-        local hourAngle = (date.hour % 12) * 30 + date.min * 0.5
-        local minAngle = date.min * 6
-        HourHand.Rotation = hourAngle
-        MinuteHand.Rotation = minAngle
+-- --- LOGIC JARUM JAM BERPUTAR CEPAT ---
+task.spawn(function()
+    local fakeTime = 0
+    while task.wait(0.01) do -- Interval super cepat
+        fakeTime = fakeTime + 2 -- Kecepatan putaran angka jam
+        HourHand.Rotation = fakeTime
+        MinuteHand.Rotation = fakeTime * 12 -- Jarum menit berputar jauh lebih cepat
     end
 end)
 
-
--- --- TOGGLE BUTTON (SILENT AIM LOCK KILLER) ---
+-- --- TOGGLE BUTTON (SILENT AIM ON / OFF) ---
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Name = "ToggleSilentAim"
 ToggleBtn.Size = UDim2.new(0, 180, 0, 40)
 ToggleBtn.Position = UDim2.new(0, 15, 0, 65)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 50, 80)
@@ -250,31 +226,29 @@ ToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- --- WATERMARK / INFO TEXT ---
+-- --- WATERMARK / INFO ---
 local InfoText = Instance.new("TextLabel")
 InfoText.Size = UDim2.new(0, 180, 0, 50)
 InfoText.Position = UDim2.new(0, 15, 0, 120)
 InfoText.BackgroundTransparency = 1
-InfoText.Text = "Target Lock: Killer Only\nStatus: Secure [Delta]"
+InfoText.Text = "Lock Target: Killer Only\nCamera Anti-Stuck: Active"
 InfoText.TextColor3 = Color3.fromRGB(120, 150, 180)
 InfoText.TextSize = 12
 InfoText.Font = Enum.Font.Code
 InfoText.TextXAlignment = Enum.TextXAlignment.Left
 InfoText.Parent = MainPanel
 
-
--- --- FLOATING OPEN / CLOSE BUTTON ---
+-- --- FLOATING OPEN / CLOSE BUTTON (Sangat Pas untuk HP) ---
 local OpenCloseBtn = Instance.new("TextButton")
-OpenCloseBtn.Name = "CyberToggleMenu"
-OpenCloseBtn.Size = UDim2.new(0, 60, 0, 35)
-OpenCloseBtn.Position = UDim2.new(0.1, 0, 0.05, 0) -- Posisinya pas di layar HP agar mudah dijangkau
+OpenCloseBtn.Size = UDim2.new(0, 65, 0, 35)
+OpenCloseBtn.Position = UDim2.new(0.1, 0, 0.05, 0)
 OpenCloseBtn.BackgroundColor3 = ScriptConfig.DarkBgColor
 OpenCloseBtn.Font = Enum.Font.Code
 OpenCloseBtn.Text = "MENU"
 OpenCloseBtn.TextColor3 = ScriptConfig.CyberColor
 OpenCloseBtn.TextSize = 12
 OpenCloseBtn.Active = true
-OpenCloseBtn.Draggable = true -- Bisa digeser sesuka hati di HP
+OpenCloseBtn.Draggable = true -- Bisa digeser di layar HP jika mengganggu
 OpenCloseBtn.Parent = CyberGui
 
 local ObjCorner = Instance.new("UICorner")
@@ -286,7 +260,6 @@ ObjStroke.Color = ScriptConfig.CyberColor
 ObjStroke.Thickness = 1.5
 ObjStroke.Parent = OpenCloseBtn
 
--- Mekanisme Minimalkan UI saat tombol di klik
 local MenuVisible = true
 OpenCloseBtn.MouseButton1Click:Connect(function()
     MenuVisible = not MenuVisible
