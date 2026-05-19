@@ -1,30 +1,131 @@
 -- =================================================================
--- VIOLENCE DISTRICT - SILENT AIM V3 (RAYCAST HOOK & PERFECT CLOCK)
--- RUN WITH DELTA EXECUTOR // MOBILE OPTIMIZED
+-- CYBER HUB // VIOLENCE DISTRICT PREMIERE EDITION (V5 ANIMATED)
+-- MADE BY CHEVA // RUN WITH DELTA EXECUTOR
 -- =================================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 -- --- CONFIGURATION & STATES ---
 local ScriptConfig = {
-    SilentAimEnabled = true,
-    TargetTeamName = "Killers",
+    AimlockEnabled = true,
+    FovRadius = 150, 
+    DetectionRadius = 50, 
+    CorrectKey = "Cheva", 
     CyberColor = Color3.fromRGB(0, 180, 255),
     DarkBgColor = Color3.fromRGB(10, 16, 26)
 }
 
--- --- DETEKSI TARGET (LOCK KILLER ONLY) ---
+-- --- SCREEN GUI UTAMA ---
+if game.CoreGui:FindFirstChild("CyberHub_ViolenceDistrict_Final") then
+    game.CoreGui["CyberHub_ViolenceDistrict_Final"]:Destroy()
+end
+
+local CyberGui = Instance.new("ScreenGui")
+CyberGui.Name = "CyberHub_ViolenceDistrict_Final"
+CyberGui.Parent = game.CoreGui
+CyberGui.ResetOnSpawn = false
+
+-- =================================================================
+-- 1. LOADING SCREEN WITH SMOOTH FADE ANIMATION (0.5s)
+-- =================================================================
+
+local LoadingScreen = Instance.new("Frame")
+LoadingScreen.Size = UDim2.new(1, 0, 1, 0)
+LoadingScreen.BackgroundColor3 = Color3.fromRGB(5, 5, 8)
+LoadingScreen.ZIndexWithParent = true
+LoadingScreen.Parent = CyberGui
+
+local LoadingText = Instance.new("TextLabel")
+LoadingText.Size = UDim2.new(0, 300, 0, 50)
+LoadingText.Position = UDim2.new(0.5, -150, 0.4, -25)
+LoadingText.BackgroundTransparency = 1 -- Mulai dari tidak terlihat (Transparan murni)
+LoadingText.Text = "Made By Cheva"
+LoadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadingText.TextTransparency = 1 -- Set awal transparan untuk animasi fade-in
+LoadingText.TextSize = 28
+LoadingText.Font = Enum.Font.Code
+LoadingText.Parent = LoadingScreen
+
+-- Outline Hitam pada Tulisan "Made By Cheva"
+local TextStroke = Instance.new("UIStroke")
+TextStroke.Color = Color3.fromRGB(0, 0, 0)
+TextStroke.Thickness = 3
+TextStroke.Transparency = 1 -- Set awal transparan mengikuti teks
+TextStroke.Parent = LoadingText
+
+-- Key Input Container
+local KeyFrame = Instance.new("Frame")
+KeyFrame.Size = UDim2.new(0, 280, 0, 110)
+KeyFrame.Position = UDim2.new(0.5, -140, 0.5, 0)
+KeyFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 30)
+KeyFrame.BackgroundTransparency = 0.3
+KeyFrame.Visible = false
+KeyFrame.Parent = LoadingScreen
+
+local KeyStroke = Instance.new("UIStroke")
+KeyStroke.Color = ScriptConfig.CyberColor
+KeyStroke.Thickness = 1.5
+KeyStroke.Parent = KeyFrame
+
+local KeyInput = Instance.new("TextBox")
+KeyInput.Size = UDim2.new(0, 240, 0, 35)
+KeyInput.Position = UDim2.new(0, 20, 0, 20)
+KeyInput.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+KeyInput.Font = Enum.Font.Code
+KeyInput.PlaceholderText = "ENTER ACCESS KEY..."
+KeyInput.Text = ""
+KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyInput.TextSize = 14
+KeyInput.Parent = KeyFrame
+
+local SubmitBtn = Instance.new("TextButton")
+SubmitBtn.Size = UDim2.new(0, 240, 0, 35)
+SubmitBtn.Position = UDim2.new(0, 20, 0, 60)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+SubmitBtn.Font = Enum.Font.Code
+SubmitBtn.Text = "VALIDATE SYSTEM"
+SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitBtn.TextSize = 12
+SubmitBtn.Parent = KeyFrame
+
+-- --- LOGIC ANIMASI MEMUNCULKAN DAN PUDAR (FADE IN / OUT 0.5 DETIK) ---
+task.spawn(function()
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+    
+    -- 1. Animasi Muncul (Fade In) - 0.5 Detik
+    local fadeInText = TweenService:Create(LoadingText, tweenInfo, {TextTransparency = 0})
+    local fadeInStroke = TweenService:Create(TextStroke, tweenInfo, {Transparency = 0})
+    fadeInText:Play()
+    fadeInStroke:Play()
+    fadeInText.Completed:Wait() -- Tunggu sampai muncul penuh
+    
+    task.wait(1.5) -- Waktu bertahan teks di layar sebelum pudar
+    
+    -- 2. Animasi Pudar / Hilang (Fade Out) - 0.5 Detik
+    local fadeOutText = TweenService:Create(LoadingText, tweenInfo, {TextTransparency = 1})
+    local fadeOutStroke = TweenService:Create(TextStroke, tweenInfo, {Transparency = 1})
+    fadeOutText:Play()
+    fadeOutStroke:Play()
+    fadeOutText.Completed:Wait() -- Tunggu sampai pudar total
+    
+    LoadingText:Destroy() -- Hancurkan teks setelah hilang
+    KeyFrame.Visible = true -- Munculkan form Key Akses
+end)
+
+
+-- =================================================================
+-- 2. CORE GAME MECHANICS (CHAMS, AIMLOCK FOV, DETECTOR)
+-- =================================================================
+
 local function IsKiller(player)
     if player == LocalPlayer then return false end
-    
-    -- 1. Berdasarkan Tim Resmi
     if player.Team and (player.Team.Name:lower():find("killer") or player.Team.Name:lower():find("slasher")) then
         return true
     end
-    
-    -- 2. Berdasarkan Tool yang dipegang (Pisau/Senjata)
     local character = player.Character
     if character then
         for _, item in pairs(character:GetChildren()) do
@@ -33,120 +134,172 @@ local function IsKiller(player)
             end
         end
     end
-    
     return false
 end
 
--- --- MENCARI KILLER TERDEKAT ---
-local function GetClosestKiller()
-    local closestTarget = nil
-    local shortestDistance = math.huge
+-- --- FEATURE A: CHAMS KILLER (FULL MERAH TANPA OUTLINE) ---
+local function ApplyKillerChams(player)
+    player.CharacterAdded:Connect(function(char)
+        if IsKiller(player) then
+            task.wait(0.5)
+            if char:FindFirstChild("CyberChams") then char.CyberChams:Destroy() end
+            
+            local box = Instance.new("Highlight")
+            box.Name = "CyberChams"
+            box.FillColor = Color3.fromRGB(255, 0, 0)
+            box.FillTransparency = 0 
+            box.OutlineTransparency = 1 
+            box.Adornee = char
+            box.Parent = char
+        end
+    end)
+    
+    if player.Character and IsKiller(player) then
+        local char = player.Character
+        if char:FindFirstChild("CyberChams") then char.CyberChams:Destroy() end
+        local box = Instance.new("Highlight")
+        box.Name = "CyberChams"
+        box.FillColor = Color3.fromRGB(255, 0, 0)
+        box.FillTransparency = 0
+        box.OutlineTransparency = 1
+        box.Adornee = char
+        box.Parent = char
+    end
+end
+
+-- --- FEATURE B: ADVANCED KILLER DETECTOR (! & ✓ PROXIMITY) ---
+local function ManageKillerDetector(player)
+    local function setupBillboard(char)
+        if not IsKiller(player) then return end
+        
+        local bboard = Instance.new("BillboardGui")
+        bboard.Name = "KillerDetectorUI"
+        bboard.Size = UDim2.new(0, 100, 0, 50)
+        bboard.AlwaysOnTop = true
+        bboard.ExtentsOffset = Vector3.new(0, 3, 0)
+        bboard.Adornee = char:FindFirstChild("Head")
+        bboard.Parent = char
+
+        local indicatorText = Instance.new("TextLabel")
+        indicatorText.Size = UDim2.new(1, 0, 1, 0)
+        indicatorText.BackgroundTransparency = 1
+        indicatorText.Font = Enum.Font.Code
+        indicatorText.TextSize = 26
+        indicatorText.TextColor3 = Color3.fromRGB(255, 0, 0)
+        indicatorText.Text = ""
+        indicatorText.Parent = bboard
+
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
+            if not char:IsDescendantOf(workspace) or not char:FindFirstChild("HumanoidRootPart") or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                connection:Disconnect()
+                return
+            end
+            
+            local dist = (char.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if dist <= 50 then
+                if dist <= 20 then
+                    indicatorText.Text = "!!!"
+                    indicatorText.TextColor3 = Color3.fromRGB(255, 0, 0)
+                else
+                    indicatorText.Text = "!"
+                    indicatorText.TextColor3 = Color3.fromRGB(255, 100, 0)
+                end
+            elseif dist > 50 and dist <= 80 then
+                indicatorText.Text = "✓"
+                indicatorText.TextColor3 = Color3.fromRGB(0, 255, 0)
+            else
+                indicatorText.Text = "" 
+            end
+        end)
+    end
+
+    player.CharacterAdded:Connect(setupBillboard)
+    if player.Character then setupBillboard(player.Character) end
+end
+
+local function GetKillerInFov()
+    local target = nil
+    local maxDistance = ScriptConfig.FovRadius
 
     for _, player in pairs(Players:GetPlayers()) do
-        if IsKiller(player) then
-            local character = player.Character
-            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if IsKiller(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local root = player.Character.HumanoidRootPart
+            local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
             
-            if rootPart and humanoid and humanoid.Health > 0 then
-                local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if myRoot then
-                    local distance = (rootPart.Position - myRoot.Position).Magnitude
-                    if distance < shortestDistance then
-                        shortestDistance = distance
-                        closestTarget = rootPart
-                    end
+            if onScreen then
+                local mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                
+                if distance < maxDistance then
+                    maxDistance = distance
+                    target = root
                 end
             end
         end
     end
-    return closestTarget
+    return target
 end
 
--- --- SILENT AIM ENGINE V3 (ADVANCED METAMETHOD HOOK) ---
--- Membelokkan peluru secara matematis tanpa mengunci pergerakan kamera utama kamu
-local gmt = getrawmetatable(game)
-setreadonly(gmt, false)
-local oldNamecall = gmt.__namecall
+-- --- VISUAL DRAWING: FOV RING (PUTIH TRANSPARAN TENGAH) ---
+local FovRing = Instance.new("Frame")
+FovRing.Size = UDim2.new(0, ScriptConfig.FovRadius * 2, 0, ScriptConfig.FovRadius * 2)
+FovRing.Position = UDim2.new(0.5, -ScriptConfig.FovRadius, 0.5, -ScriptConfig.FovRadius)
+FovRing.BackgroundTransparency = 1 
+FovRing.Visible = false
+FovRing.Parent = CyberGui
 
-gmt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    
-    if ScriptConfig.SilentAimEnabled and not checkcaller() then
-        if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
-            local targetPart = GetClosestKiller()
-            if targetPart then
-                if method == "Raycast" then
-                    -- args[1] = Origin, args[2] = Direction
-                    local origin = args[1]
-                    args[2] = (targetPart.Position - origin).Unit * 1000
-                elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
-                    -- args[1] = Ray
-                    local origin = args[1].Origin
-                    args[1] = Ray.new(origin, (targetPart.Position - origin).Unit * 1000)
-                end
-                return oldNamecall(self, unpack(args))
-            end
+local FovCorner = Instance.new("UICorner")
+FovCorner.CornerRadius = UDim.new(1, 0)
+FovCorner.Parent = FovRing
+
+local FovStroke = Instance.new("UIStroke")
+FovStroke.Color = Color3.fromRGB(255, 255, 255) 
+FovStroke.Thickness = 1.5
+FovStroke.Parent = FovRing
+
+-- --- MAIN LOCK SYSTEM ---
+RunService.RenderStepped:Connect(function()
+    if ScriptConfig.AimlockEnabled and LocalPlayer.Character then
+        local lockTarget = GetKillerInFov()
+        if lockTarget then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, lockTarget.Position)
         end
     end
-    return oldNamecall(self, ...)
 end)
-setreadonly(gmt, true)
 
 
 -- =================================================================
--- MODERN CYBERPUNK UI GENERATOR WITH PERFECT CENTERED CLOCK
+-- 3. EXCLUSIVE MAIN MENU (CYBER DARK BLUE FRAME & BACKGROUND CLOCK)
 -- =================================================================
 
-if game.CoreGui:FindFirstChild("CyberHub_ViolenceDistrict_V3") then
-    game.CoreGui["CyberHub_ViolenceDistrict_V3"]:Destroy()
-end
-
-local CyberGui = Instance.new("ScreenGui")
-CyberGui.Name = "CyberHub_ViolenceDistrict_V3"
-CyberGui.Parent = game.CoreGui
-CyberGui.ResetOnSpawn = false
-
--- --- MAIN PANEL ---
 local MainPanel = Instance.new("Frame")
 MainPanel.Name = "MainPanel"
 MainPanel.Size = UDim2.new(0, 360, 0, 240)
 MainPanel.Position = UDim2.new(0.5, -180, 0.4, -120)
 MainPanel.BackgroundColor3 = ScriptConfig.DarkBgColor
 MainPanel.BackgroundTransparency = 0.15
-MainPanel.BorderSizePixel = 0
 MainPanel.Active = true
 MainPanel.Draggable = true
+MainPanel.Visible = false
 MainPanel.Parent = CyberGui
 
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = ScriptConfig.CyberColor
-UIStroke.Thickness = 2
-UIStroke.Parent = MainPanel
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = ScriptConfig.CyberColor
+MainStroke.Thickness = 2
+MainStroke.Parent = MainPanel
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainPanel
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainPanel
 
--- --- TITLE BAR ---
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 35)
-Title.Position = UDim2.new(0, 15, 0, 5)
-Title.BackgroundTransparency = 1
-Title.Text = "CYBER HUB // SILENT_AIM_V3"
-Title.TextColor3 = ScriptConfig.CyberColor
-Title.TextSize = 16
-Title.Font = Enum.Font.Code
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = MainPanel
-
--- --- ANALOG CYBER CLOCK FRAME ---
+-- --- BACKGROUND ONE-HAND CLOCK (1 JARUM BERPUTAR PAS DI TENGAH) ---
 local ClockFrame = Instance.new("Frame")
-ClockFrame.Size = UDim2.new(0, 110, 0, 110)
-ClockFrame.Position = UDim2.new(1, -130, 0.5, -45)
-ClockFrame.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
-ClockFrame.BackgroundTransparency = 0.6
+ClockFrame.Size = UDim2.new(0, 120, 0, 120)
+ClockFrame.Position = UDim2.new(0.5, -60, 0.5, -40) 
+ClockFrame.BackgroundColor3 = Color3.fromRGB(15, 22, 35)
+ClockFrame.BackgroundTransparency = 0.75
+ClockFrame.ZIndex = 1
 ClockFrame.Parent = MainPanel
 
 local ClockCorner = Instance.new("UICorner")
@@ -154,11 +307,10 @@ ClockCorner.CornerRadius = UDim.new(1, 0)
 ClockCorner.Parent = ClockFrame
 
 local ClockStroke = Instance.new("UIStroke")
-ClockStroke.Color = ScriptConfig.CyberColor
+ClockStroke.Color = Color3.fromRGB(0, 120, 200)
 ClockStroke.Thickness = 1
 ClockStroke.Parent = ClockFrame
 
--- Angka Jam (12, 3, 6, 9)
 local clockNumbers = {["12"] = UDim2.new(0.5, -10, 0, 4), ["3"] = UDim2.new(1, -16, 0.5, -7), ["6"] = UDim2.new(0.5, -10, 1, -18), ["9"] = UDim2.new(0, 4, 0.5, -7)}
 for numStr, pos in pairs(clockNumbers) do
     local numLabel = Instance.new("TextLabel")
@@ -166,18 +318,18 @@ for numStr, pos in pairs(clockNumbers) do
     numLabel.Position = pos
     numLabel.BackgroundTransparency = 1
     numLabel.Text = numStr
-    numLabel.TextColor3 = ScriptConfig.CyberColor
+    numLabel.TextColor3 = Color3.fromRGB(0, 120, 180)
     numLabel.TextSize = 10
     numLabel.Font = Enum.Font.Code
+    numLabel.ZIndex = 1
     numLabel.Parent = ClockFrame
 end
 
--- --- POROS TENGAH & JARUM JAM FIX (PERFECT CENTERED) ---
--- Menggunakan sistem penampung khusus (Frame berukuran 0x0 tepat di tengah lingkaran) agar rotasi murni pivot di tengah
 local ClockPivot = Instance.new("Frame")
 ClockPivot.Size = UDim2.new(0, 0, 0, 0)
 ClockPivot.Position = UDim2.new(0.5, 0, 0.5, 0)
 ClockPivot.BackgroundTransparency = 1
+ClockPivot.ZIndex = 2
 ClockPivot.Parent = ClockFrame
 
 local CenterDot = Instance.new("Frame")
@@ -185,90 +337,75 @@ CenterDot.Size = UDim2.new(0, 6, 0, 6)
 CenterDot.Position = UDim2.new(0, -3, 0, -3)
 CenterDot.BackgroundColor3 = ScriptConfig.CyberColor
 CenterDot.BorderSizePixel = 0
+CenterDot.ZIndex = 3
 CenterDot.Parent = ClockPivot
 
--- Jarum Jam Pendek
-local HourHand = Instance.new("Frame")
-HourHand.Size = UDim2.new(0, 2, 0, 26)
-HourHand.Position = UDim2.new(0, -1, 0, -26) -- Menggeser base tepat di poros tengah
-HourHand.BackgroundColor3 = ScriptConfig.CyberColor
-HourHand.BorderSizePixel = 0
-HourHand.Parent = ClockPivot
+local SingleHand = Instance.new("Frame")
+SingleHand.Size = UDim2.new(0, 2, 0, 45)
+SingleHand.Position = UDim2.new(0, -1, 0, -45)
+SingleHand.BackgroundColor3 = ScriptConfig.CyberColor
+SingleHand.BorderSizePixel = 0
+SingleHand.ZIndex = 2
+SingleHand.Parent = ClockPivot
 
--- Jarum Menit Panjang
-local MinuteHand = Instance.new("Frame")
-MinuteHand.Size = UDim2.new(0, 1.5, 0, 42)
-MinuteHand.Position = UDim2.new(0, -0.75, 0, -42) -- Menggeser base tepat di poros tengah
-MinuteHand.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-MinuteHand.BorderSizePixel = 0
-MinuteHand.Parent = ClockPivot
-
--- --- LOGIC PUTARAN JAM SUPER CEPAT (SMOOTH & FIX SPIN) ---
 task.spawn(function()
-    local fakeTime = 0
+    local rotationSpeed = 0
     while task.wait(0.01) do
-        fakeTime = fakeTime + 3 -- Kecepatan putaran
-        HourHand.Rotation = fakeTime
-        MinuteHand.Rotation = fakeTime * 12 -- Jarum menit melaju 12 kali lebih cepat layaknya jam asli yang dipercepat
+        rotationSpeed = rotationSpeed + 4
+        SingleHand.Rotation = rotationSpeed
     end
 end)
 
--- --- TOGGLE BUTTON (SILENT AIM ON / OFF) ---
+-- --- UI CONTENT CONTROL ---
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 0, 35)
+Title.Position = UDim2.new(0, 15, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "CYBERHUB // DISTR_VIOLENCE"
+Title.TextColor3 = ScriptConfig.CyberColor
+Title.TextSize = 15
+Title.Font = Enum.Font.Code
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.ZIndex = 4
+Title.Parent = MainPanel
+
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 180, 0, 40)
-ToggleBtn.Position = UDim2.new(0, 15, 0, 65)
+ToggleBtn.Size = UDim2.new(0, 150, 0, 38)
+ToggleBtn.Position = UDim2.new(0, 15, 0, 180)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 50, 80)
 ToggleBtn.Font = Enum.Font.Code
-ToggleBtn.Text = "SILENT AIM: ON"
+ToggleBtn.Text = "AIMLOCK: ON"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 14
+ToggleBtn.TextSize = 12
+ToggleBtn.ZIndex = 4
 ToggleBtn.Parent = MainPanel
 
 local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 4)
 BtnCorner.Parent = ToggleBtn
 
-local BtnStroke = Instance.new("UIStroke")
-BtnStroke.Color = ScriptConfig.CyberColor
-BtnStroke.Thickness = 1
-BtnStroke.Parent = ToggleBtn
-
 ToggleBtn.MouseButton1Click:Connect(function()
-    ScriptConfig.SilentAimEnabled = not ScriptConfig.SilentAimEnabled
-    if ScriptConfig.SilentAimEnabled then
-        ToggleBtn.Text = "SILENT AIM: ON"
+    ScriptConfig.AimlockEnabled = not ScriptConfig.AimlockEnabled
+    if ScriptConfig.AimlockEnabled then
+        ToggleBtn.Text = "AIMLOCK: ON"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 50, 80)
-        ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     else
-        ToggleBtn.Text = "SILENT AIM: OFF"
+        ToggleBtn.Text = "AIMLOCK: OFF"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
-        ToggleBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     end
 end)
 
--- --- WATERMARK / INFO ---
-local InfoText = Instance.new("TextLabel")
-InfoText.Size = UDim2.new(0, 180, 0, 50)
-InfoText.Position = UDim2.new(0, 15, 0, 120)
-InfoText.BackgroundTransparency = 1
-InfoText.Text = "Lock Target: Killer Only\nEngine: Metamethod Ray Hook"
-InfoText.TextColor3 = Color3.fromRGB(120, 150, 180)
-InfoText.TextSize = 12
-InfoText.Font = Enum.Font.Code
-InfoText.TextXAlignment = Enum.TextXAlignment.Left
-InfoText.Parent = MainPanel
-
--- --- FLOATING OPEN / CLOSE BUTTON (MOBILE TOUCH OPTIMIZED) ---
 local OpenCloseBtn = Instance.new("TextButton")
 OpenCloseBtn.Size = UDim2.new(0, 65, 0, 35)
 OpenCloseBtn.Position = UDim2.new(0.1, 0, 0.05, 0)
 OpenCloseBtn.BackgroundColor3 = ScriptConfig.DarkBgColor
 OpenCloseBtn.Font = Enum.Font.Code
-OpenCloseBtn.Text = "O P E N / C L O S E"
+OpenCloseBtn.Text = "MENU"
 OpenCloseBtn.TextColor3 = ScriptConfig.CyberColor
 OpenCloseBtn.TextSize = 12
 OpenCloseBtn.Active = true
 OpenCloseBtn.Draggable = true
+OpenCloseBtn.Visible = false
 OpenCloseBtn.Parent = CyberGui
 
 local ObjCorner = Instance.new("UICorner")
@@ -288,5 +425,34 @@ OpenCloseBtn.MouseButton1Click:Connect(function()
         OpenCloseBtn.TextColor3 = ScriptConfig.CyberColor
     else
         OpenCloseBtn.TextColor3 = Color3.fromRGB(100, 100, 100)
+    end
+end)
+
+
+-- =================================================================
+-- 4. KEY INTEGRATION AUTHENTICATION VALIDATION LOGIC
+-- =================================================================
+
+SubmitBtn.MouseButton1Click:Connect(function()
+    if KeyInput.Text == ScriptConfig.CorrectKey then
+        LoadingScreen:Destroy()
+        MainPanel.Visible = true
+        OpenCloseBtn.Visible = true
+        FovRing.Visible = true
+        
+        for _, p in pairs(Players:GetPlayers()) do
+            ApplyKillerChams(p)
+            ManageKillerDetector(p)
+        end
+        Players.PlayerAdded:Connect(function(p)
+            ApplyKillerChams(p)
+            ManageKillerDetector(p)
+        end)
+    else
+        SubmitBtn.Text = "Key Salah!"
+        SubmitBtn.BackgroundColor3 = Color3.fromRGB(120, 20, 20)
+        task.wait(1.5)
+        SubmitBtn.Text = "VALIDATE SYSTEM"
+        SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
     end
 end)
