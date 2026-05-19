@@ -1,21 +1,27 @@
--- [[ CHEVAHUB - FRAMEWORK UI & MOONWALK ]] --
+-- [[ CHEVAHUB - MOONWALK & SILENT AIM (LOCK KILLER) ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
--- State Fitur
+-- State / Status Fitur
 local moonwalkActive = false
-local moonwalkConnection = nil
+local silentAimActive = false
 
--- Hapus UI lama jika tumpuk
+local moonwalkConnection = nil
+local silentAimConnection = nil
+
+-- Hapus UI lama biar gak menumpuk saat di-execute ulang
 if CoreGui:FindFirstChild("ChevaHub") then
     CoreGui.ChevaHub:Destroy()
 end
 
--- [1] UTAMA SCREEN GUI
+-- ==========================================
+-- [1] UTAMA SCREEN GUI & FRAME
+-- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ChevaHub"
 if syn and syn.protect_gui then
@@ -25,9 +31,7 @@ else
     ScreenGui.Parent = CoreGui
 end
 
--- ==========================================
--- TOMBOL OPEN MENU (Muncul saat menu utama di-close)
--- ==========================================
+-- Tombol Open Menu (Kecil di Kanan Atas saat di-Close)
 local OpenBtn = Instance.new("TextButton")
 OpenBtn.Name = "OpenBtn"
 OpenBtn.Size = UDim2.new(0, 90, 0, 35)
@@ -38,7 +42,7 @@ OpenBtn.Text = "OPEN CHEVA"
 OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenBtn.Font = Enum.Font.GothamBold
 OpenBtn.TextSize = 12
-OpenBtn.Visible = false -- Hanya muncul saat MainFrame ditutup
+OpenBtn.Visible = false -- Sembunyi di awal
 OpenBtn.Draggable = true
 OpenBtn.Parent = ScreenGui
 
@@ -46,12 +50,10 @@ local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(0, 6)
 OpenCorner.Parent = OpenBtn
 
--- ==========================================
--- MAIN FRAME BACKGROUND (Hitam Transparan 0.5)
--- ==========================================
+-- Main Frame (Hitam Transparan 0.5)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 340, 0, 240)
+MainFrame.Size = UDim2.new(0, 360, 0, 250)
 MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 MainFrame.BackgroundTransparency = 0.5
@@ -64,12 +66,24 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
 
+-- Tombol Close (X) - Ditambahkan di pojok kanan atas MainFrame
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseBtn"
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 22
+CloseBtn.Parent = MainFrame
+
 -- ==========================================
--- SIDEBAR UTAMA (Bagian Kiri)
+-- [2] SIDEBAR (BAGIAN KIRI)
 -- ==========================================
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
-Sidebar.Size = UDim2.new(0, 60, 1, 0)
+Sidebar.Size = UDim2.new(0, 65, 1, 0)
 Sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Sidebar.BackgroundTransparency = 0.3
 Sidebar.BorderSizePixel = 0
@@ -79,133 +93,134 @@ local SideCorner = Instance.new("UICorner")
 SideCorner.CornerRadius = UDim.new(0, 12)
 SideCorner.Parent = Sidebar
 
--- Ikon Tab 1 (Handphone)
+-- Tombol Tab 1 (Ikon Handphone 📱)
 local Tab1Btn = Instance.new("TextButton")
-Tab1Btn.Size = UDim2.new(0, 40, 0, 40)
-Tab1Btn.Position = UDim2.new(0.5, -20, 0, 20)
+Tab1Btn.Size = UDim2.new(0, 45, 0, 45)
+Tab1Btn.Position = UDim2.new(0.5, -22, 0, 20)
 Tab1Btn.BackgroundTransparency = 1
 Tab1Btn.Text = "📱"
-Tab1Btn.TextSize = 24
+Tab1Btn.TextSize = 26
 Tab1Btn.Parent = Sidebar
 
--- Ikon Dummy Lainnya (Sesuai Sketsa Gambar Kamu)
-local DummyIcon1 = Instance.new("TextLabel")
-DummyIcon1.Size = UDim2.new(0, 40, 0, 40)
-DummyIcon1.Position = UDim2.new(0.5, -20, 0, 80)
-DummyIcon1.BackgroundTransparency = 1
-DummyIcon1.Text = "🤝"
-DummyIcon1.TextSize = 24
-DummyIcon1.Parent = Sidebar
+-- Ikon Dekorasi Sesuai Gambar Kamu (🤝 dan 👹)
+local IconHandshake = Instance.new("TextLabel")
+IconHandshake.Size = UDim2.new(0, 45, 0, 45)
+IconHandshake.Position = UDim2.new(0.5, -22, 0, 85)
+IconHandshake.BackgroundTransparency = 1
+IconHandshake.Text = "🤝"
+IconHandshake.TextSize = 26
+IconHandshake.Parent = Sidebar
 
-local DummyIcon2 = Instance.new("TextLabel")
-DummyIcon2.Size = UDim2.new(0, 40, 0, 40)
-DummyIcon2.Position = UDim2.new(0.5, -20, 0, 140)
-DummyIcon2.BackgroundTransparency = 1
-DummyIcon2.Text = "👹"
-DummyIcon2.TextSize = 24
-DummyIcon2.Parent = Sidebar
-
--- Tombol Close (X) di Pojok Kanan Atas
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 20
-CloseBtn.Parent = MainFrame
+local IconDevil = Instance.new("TextLabel")
+IconDevil.Size = UDim2.new(0, 45, 0, 45)
+IconDevil.Position = UDim2.new(0.5, -22, 0, 150)
+IconDevil.BackgroundTransparency = 1
+IconDevil.Text = "👹"
+IconDevil.TextSize = 26
+IconDevil.Parent = Sidebar
 
 -- ==========================================
--- KONTEN HALAMAN (TAMPILAN AWAL / CHEVAHUB)
+-- [3] KONTEN TAB AWAL (TAMPILAN CHEVAHUB)
 -- ==========================================
 local HomeTab = Instance.new("Frame")
 HomeTab.Name = "HomeTab"
-HomeTab.Size = UDim2.new(1, -70, 1, 0)
-HomeTab.Position = UDim2.new(0, 70, 0, 0)
+HomeTab.Size = UDim2.new(1, -75, 1, 0)
+HomeTab.Position = UDim2.new(0, 75, 0, 0)
 HomeTab.BackgroundTransparency = 1
-HomeTab.Visible = true -- Tampilan awal aktif
+HomeTab.Visible = true -- Tampilan pertama pas di-inject
 HomeTab.Parent = MainFrame
 
 local HomeTitle = Instance.new("TextLabel")
 HomeTitle.Size = UDim2.new(1, 0, 0, 50)
-HomeTitle.Position = UDim2.new(0, 0, 0, 15)
+HomeTitle.Position = UDim2.new(0, 0, 0, 20)
 HomeTitle.BackgroundTransparency = 1
 HomeTitle.Text = "ChevaHub"
 HomeTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 HomeTitle.Font = Enum.Font.GothamBold
-HomeTitle.TextSize = 28
+HomeTitle.TextSize = 32
 HomeTitle.Parent = HomeTab
 
 -- ==========================================
--- KONTEN HALAMAN (MAIN MENU TAB - SETELAH KLIK 📱)
+-- [4] KONTEN TAB MAIN MENU (SETELAH KLIK 📱)
 -- ==========================================
 local MainMenuTab = Instance.new("Frame")
 MainMenuTab.Name = "MainMenuTab"
-MainMenuTab.Size = UDim2.new(1, -70, 1, 0)
-MainMenuTab.Position = UDim2.new(0, 70, 0, 0)
+MainMenuTab.Size = UDim2.new(1, -75, 1, 0)
+MainMenuTab.Position = UDim2.new(0, 75, 0, 0)
 MainMenuTab.BackgroundTransparency = 1
-MainMenuTab.Visible = false -- Tersembunyi di awal
+MainMenuTab.Visible = false -- Sembunyi, nunggu diklik 📱
 MainMenuTab.Parent = MainFrame
 
 local MenuTitle = Instance.new("TextLabel")
 MenuTitle.Size = UDim2.new(1, 0, 0, 40)
-MenuTitle.Position = UDim2.new(0, 0, 0, 10)
+MenuTitle.Position = UDim2.new(0, 10, 0, 15)
 MenuTitle.BackgroundTransparency = 1
 MenuTitle.Text = "Main Menu"
-MenuTitle.TextColor3 = Color3.fromRGB(150, 160, 180)
+MenuTitle.TextColor3 = Color3.fromRGB(150, 160, 180) -- Abu kebiruan sesuai gambar
 MenuTitle.Font = Enum.Font.GothamBold
-MenuTitle.TextSize = 18
+MenuTitle.TextSize = 20
 MenuTitle.TextXAlignment = Enum.TextXAlignment.Left
 MenuTitle.Parent = MainMenuTab
 
--- Tombol Toggle Moonwalk
+-- Tombol Monwalk ON/OFF
 local MoonwalkToggle = Instance.new("TextButton")
-MoonwalkToggle.Size = UDim2.new(1, -20, 0, 35)
-MoonwalkToggle.Position = UDim2.new(0, 0, 0, 60)
+MoonwalkToggle.Size = UDim2.new(1, -20, 0, 40)
+MoonwalkToggle.Position = UDim2.new(0, 10, 0, 70)
 MoonwalkToggle.BackgroundTransparency = 1
-MoonwalkToggle.Text = "Moonwalk OFF"
-MoonwalkToggle.TextColor3 = Color3.fromRGB(255, 50, 50) -- Merah pas mati
+MoonwalkToggle.Text = "Monwalk ON/OFF"
+MoonwalkToggle.TextColor3 = Color3.fromRGB(255, 50, 50) -- Default Merah
 MoonwalkToggle.Font = Enum.Font.GothamBold
-MoonwalkToggle.TextSize = 15
+MoonwalkToggle.TextSize = 16
 MoonwalkToggle.TextXAlignment = Enum.TextXAlignment.Left
 MoonwalkToggle.Parent = MainMenuTab
 
--- Placeholder Text untuk Silent Aim (Hanya visual teks non-fungsi)
-local SilentAimPlaceholder = Instance.new("TextLabel")
-SilentAimPlaceholder.Size = UDim2.new(1, -20, 0, 35)
-SilentAimPlaceholder.Position = UDim2.new(0, 0, 0, 105)
-SilentAimPlaceholder.BackgroundTransparency = 1
-SilentAimPlaceholder.Text = "Silent Aim DISABLED"
-SilentAimPlaceholder.TextColor3 = Color3.fromRGB(120, 120, 120)
-SilentAimPlaceholder.Font = Enum.Font.GothamBold
-SilentAimPlaceholder.TextSize = 15
-SilentAimPlaceholder.TextXAlignment = Enum.TextXAlignment.Left
-SilentAimPlaceholder.Parent = MainMenuTab
-
+-- Tombol Silent Aim ON/OFF
+local SilentAimToggle = Instance.new("TextButton")
+SilentAimToggle.Size = UDim2.new(1, -20, 0, 40)
+SilentAimToggle.Position = UDim2.new(0, 10, 0, 125)
+SilentAimToggle.BackgroundTransparency = 1
+SilentAimToggle.Text = "Silent Aim ON/OFF"
+SilentAimToggle.TextColor3 = Color3.fromRGB(255, 50, 50) -- Default Merah
+SilentAimToggle.Font = Enum.Font.GothamBold
+SilentAimToggle.TextSize = 16
+SilentAimToggle.TextXAlignment = Enum.TextXAlignment.Left
+SilentAimToggle.Parent = MainMenuTab
 
 -- ==========================================
--- LOGIKA FUNGSI & INTERAKSI (INSTANT SYSTEM)
+-- [5] LOGIKA DAN MEKANIK FITUR
 -- ==========================================
 
--- Fungsi Pindah Tab Instan
-Tab1Btn.MouseButton1Click:Connect(function()
-    HomeTab.Visible = false
-    MainMenuTab.Visible = true
-end)
+-- Fungsi Cari Killer Terdekat / Player Berperan Killer
+local function GetKillerHead()
+    local target = nil
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
+            -- Deteksi kata "Killer" di nama player atau nama model karakter game
+            if string.find(string.lower(v.Name), "killer") or (v.Character:FindFirstChild("Humanoid") and string.find(string.lower(v.Character.Name), "killer")) then
+                target = v.Character.Head
+                break
+            end
+        end
+    end
+    -- Jika sistem nama game berbeda, alternatifnya mengunci Player terdekat selain diri sendiri
+    if not target then
+        local shortestDistance = math.huge
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart") then
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local distance = (v.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        target = v.Character.Head
+                    end
+                end
+            end
+        end
+    end
+    return target
+end
 
--- Fungsi Buka Tutup Menu (X dan Open Button)
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    OpenBtn.Visible = true
-end)
-
-OpenBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    OpenBtn.Visible = false
-end)
-
--- Logika Moonwalk Mekanik
+-- Aktifkan Moonwalk
 local function ApplyMoonwalk()
     if moonwalkConnection then moonwalkConnection:Disconnect() end
     moonwalkConnection = RunService.RenderStepped:Connect(function()
@@ -224,11 +239,9 @@ local function ApplyMoonwalk()
     end)
 end
 
+-- Matikan Moonwalk
 local function RemoveMoonwalk()
-    if moonwalkConnection then
-        moonwalkConnection:Disconnect()
-        moonwalkConnection = nil
-    end
+    if moonwalkConnection then moonwalkConnection:Disconnect() end
     local char = LocalPlayer.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
@@ -236,24 +249,93 @@ local function RemoveMoonwalk()
     end
 end
 
--- Interaksi Tombol Moonwalk
+-- Aktifkan Silent Aim (Teleport Hitbox / Raycast Hooking)
+local function ApplySilentAim()
+    if silentAimConnection then silentAimConnection:Disconnect() end
+    
+    -- Memanipulasi posisi Mouse Hit secara instan saat menembak angin agar peluru belok ke Killer
+    local gmt = getrawmetatable(game)
+    setreadonly(gmt, false)
+    local oldNamecall = gmt.__namecall
+    local oldIndex = gmt.__index
+
+    silentAimConnection = RunService.RenderStepped:Connect(function()
+        -- Loop aktif menjaga fungsi hook tetap berjalan di background
+    end)
+
+    gmt.__index = newcclosure(function(self, idx)
+        if silentAimActive and tostring(self) == "Mouse" and (idx == "Hit" or idx == "Target") then
+            local killerHead = GetKillerHead()
+            if killerHead then
+                if idx == "Hit" then
+                    return killerHead.CFrame
+                elseif idx == "Target" then
+                    return killerHead
+                end
+            end
+        end
+        return oldIndex(self, idx)
+    end)
+    setreadonly(gmt, true)
+end
+
+-- Matikan Silent Aim
+local function RemoveSilentAim()
+    if silentAimConnection then 
+        silentAimConnection:Disconnect() 
+        silentAimConnection = nil
+    end
+end
+
+-- ==========================================
+-- [6] TOMBOL INTERAKSI & PERPINDAHAN TAB
+-- ==========================================
+
+-- Klik Ikon 📱 Pindah Ke Main Menu (Instant)
+Tab1Btn.MouseButton1Click:Connect(function()
+    HomeTab.Visible = false
+    MainMenuTab.Visible = true
+end)
+
+-- Tombol Close (X) -> Sembunyikan Menu Utama, Munculkan Tombol Open
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    OpenBtn.Visible = true
+end)
+
+-- Tombol Open -> Munculkan Menu Utama, Sembunyikan Tombol Open
+OpenBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    OpenBtn.Visible = false
+end)
+
+-- Toggle Fitur Monwalk
 MoonwalkToggle.MouseButton1Click:Connect(function()
     moonwalkActive = not moonwalkActive
     if moonwalkActive then
-        MoonwalkToggle.Text = "Moonwalk ON"
-        MoonwalkToggle.TextColor3 = Color3.fromRGB(50, 255, 50) -- Hijau
+        MoonwalkToggle.TextColor3 = Color3.fromRGB(50, 255, 50) -- Hijau (ON)
         ApplyMoonwalk()
     else
-        MoonwalkToggle.Text = "Moonwalk OFF"
-        MoonwalkToggle.TextColor3 = Color3.fromRGB(255, 50, 50) -- Merah
+        MoonwalkToggle.TextColor3 = Color3.fromRGB(255, 50, 50) -- Merah (OFF)
         RemoveMoonwalk()
     end
 end)
 
--- Re-attach otomatis jika respawn
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.5)
-    if moonwalkActive then
-        ApplyMoonwalk()
+-- Toggle Fitur Silent Aim
+SilentAimToggle.MouseButton1Click:Connect(function()
+    silentAimActive = not silentAimActive
+    if silentAimActive then
+        SilentAimToggle.TextColor3 = Color3.fromRGB(50, 255, 50) -- Hijau (ON)
+        ApplySilentAim()
+    else
+        SilentAimToggle.TextColor3 = Color3.fromRGB(255, 50, 50) -- Merah (OFF)
+        RemoveSilentAim()
     end
+end)
+
+-- Sistem Auto-Reattach saat Respawn In-Game
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.6)
+    if moonwalkActive then ApplyMoonwalk() end
+    if silentAimActive then ApplySilentAim() end
 end)
