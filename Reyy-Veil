@@ -1,7 +1,8 @@
 -- =============================================================================
--- PROJECT: CHEVA HUB (Violence District - ABSOLUTE FIXED VERSION)
+-- PROJECT: CHEVA HUB (Violence District - LIGHTWEIGHT NATIVE VERSION)
 -- COMPATIBILITY: Delta Executor (Mobile Native PlayerGui)
--- STYLE: Cyber Dark Blue & Black
+-- REMOVED: Fullscreen Loading Screen (Fixed No-Show Bug)
+-- FIXED BY: Cheva Design Integration
 -- =============================================================================
 
 local Players = game:GetService("Players")
@@ -36,9 +37,9 @@ local SaveData = {
 
 local UserStatus = "None" -- "VIP", "Free", atau "None"
 
--- Pembuatan ScreenGui Langsung ke PlayerGui (Metode Paling Stabil & Pasti Muncul di Delta Mobile)
+-- Pembuatan ScreenGui Langsung ke PlayerGui Tanpa Hambatan Layer Fullscreen
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ChevaHub_ViolenceDistrict_Official"
+ScreenGui.Name = "ChevaHub_ViolenceDistrict_Direct"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -65,54 +66,11 @@ local function ShowNotification(text)
     end)
 end
 
--- =============================================================================
--- 1. LOADING SCREEN (ANIMASI OUTLINE HITAM & TEKS PUTIH)
--- =============================================================================
-local function StartLoadingScreen(onComplete)
-    local LoadingFrame = Instance.new("Frame")
-    LoadingFrame.Size = UDim2.new(1, 0, 1, 0)
-    LoadingFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 8)
-    LoadingFrame.Parent = ScreenGui
-
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.Size = UDim2.new(0, 400, 0, 100)
-    TextLabel.Position = UDim2.new(0.5, -200, 0.5, -50)
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Text = "Made by cheva"
-    TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TextLabel.TextSize = 34
-    TextLabel.Font = Enum.Font.Code
-    TextLabel.TextTransparency = 1
-    TextLabel.Parent = LoadingFrame
-
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Thickness = 3
-    Stroke.Color = Color3.fromRGB(0, 0, 0)
-    Stroke.LineJoinMode = Enum.LineJoinMode.Round
-    Stroke.Transparency = 1
-    Stroke.Parent = TextLabel
-
-    -- Animasi Muncul (0.5s)
-    TweenService:Create(TextLabel, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
-    TweenService:Create(Stroke, TweenInfo.new(0.5), {Transparency = 0}):Play()
-    task.wait(1.5)
-
-    -- Animasi Hilang (0.5s)
-    TweenService:Create(TextLabel, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-    TweenService:Create(Stroke, TweenInfo.new(0.5), {Transparency = 1}):Play()
-    local frameFade = TweenService:Create(LoadingFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-    frameFade:Play()
-    frameFade.Completed:Wait()
-
-    LoadingFrame:Destroy()
-    onComplete()
-end
-
 local ShowKeySystem
 local ShowMainMenu
 
 -- =============================================================================
--- 2. KEY SYSTEM SCREEN
+-- 1. KEY SYSTEM SCREEN (LANGSUNG MUNCUL TANPA LOADING DELAY)
 -- =============================================================================
 ShowKeySystem = function()
     local KeyFrame = Instance.new("Frame")
@@ -193,7 +151,7 @@ ShowKeySystem = function()
 end
 
 -- =============================================================================
--- 3. MAIN MOD MENU (CYBER DARK BLUE STYLE)
+-- 2. MAIN MOD MENU (CYBER DARK BLUE STYLE)
 -- =============================================================================
 ShowMainMenu = function()
     local MainFrame = Instance.new("Frame")
@@ -243,15 +201,34 @@ ShowMainMenu = function()
     TopBar.Parent = MainFrame
 
     local MenuTitle = Instance.new("TextLabel")
-    MenuTitle.Size = UDim2.new(0, 300, 1, 0)
+    MenuTitle.Size = UDim2.new(0, 250, 1, 0)
     MenuTitle.Position = UDim2.new(0, 12, 0, 0)
     MenuTitle.BackgroundTransparency = 1
-    MenuTitle.Text = "CHEVA HUB // VIOLENCE DISTRICT MOD"
+    MenuTitle.Text = "CHEVA HUB // VIOLENCE DISTRICT"
     MenuTitle.TextColor3 = Color3.fromRGB(0, 210, 255)
     MenuTitle.Font = Enum.Font.Code
     MenuTitle.TextSize = 13
     MenuTitle.TextXAlignment = Enum.TextXAlignment.Left
     MenuTitle.Parent = TopBar
+
+    -- --- INTEGRASI WATERMARK BARU: MADE BY CHEVA (PALING ATAS) ---
+    local MadeByChevaLabel = Instance.new("TextLabel")
+    MadeByChevaLabel.Size = UDim2.new(0, 150, 1, 0)
+    MadeByChevaLabel.Position = UDim2.new(1, -162, 0, 0)
+    MadeByChevaLabel.BackgroundTransparency = 1
+    MadeByChevaLabel.Text = "Made by cheva"
+    MadeByChevaLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MadeByChevaLabel.Font = Enum.Font.Code
+    MadeByChevaLabel.TextSize = 13
+    MadeByChevaLabel.TextXAlignment = Enum.TextXAlignment.Right
+    MadeByChevaLabel.Parent = TopBar
+
+    local WatermarkStroke = Instance.new("UIStroke")
+    WatermarkStroke.Thickness = 2
+    WatermarkStroke.Color = Color3.fromRGB(0, 0, 0)
+    WatermarkStroke.LineJoinMode = Enum.LineJoinMode.Round
+    WatermarkStroke.Parent = MadeByChevaLabel
+    -- -------------------------------------------------------------
 
     -- Sidebar (Tabs)
     local Sidebar = Instance.new("Frame")
@@ -413,7 +390,7 @@ ShowMainMenu = function()
     end
 
     -- =============================================================================
-    -- IMPLEMENTASI LOGIK SEURUH FITUR (TIDAK ADA YANG HILANG)
+    -- LOGIK ENGINE SELURUH FITUR (AMAN & LENGKAP)
     -- =============================================================================
     local Toggles = {}
 
@@ -471,7 +448,7 @@ ShowMainMenu = function()
         SaveData.TwistOfFate = v
     end)
 
-    -- Pengganti Drawing Ring Menggunakan Frame GUI Native (Sangat Aman & Pasti Muncul di HP)
+    -- FOV Ring Native GUI Frame
     local FOVRing = Instance.new("Frame")
     FOVRing.Size = UDim2.new(0, SaveData.FOVSize * 2, 0, SaveData.FOVSize * 2)
     FOVRing.Position = UDim2.new(0.5, -SaveData.FOVSize, 0.5, -SaveData.FOVSize)
@@ -499,7 +476,7 @@ ShowMainMenu = function()
         SaveData.FastVaultSpeed = math.clamp(tonumber(val) or 1, 1, 6)
     end)
 
-    -- Aim Prediksi Button Mode
+    -- Aim Prediksi 
     local PredFrame = Instance.new("Frame")
     PredFrame.Size = UDim2.new(1, -10, 0, 35)
     PredFrame.BackgroundTransparency = 1
@@ -531,7 +508,28 @@ ShowMainMenu = function()
         PredBtn.Text = "Mode: " .. tostring(SaveData.AimPrediction)
     end)
 
-    -- --- TAB: VISUAL (CHAMS & SNAPLINES) ---
+    -- --- TAB: VISUAL ---
     local function ApplyChams(folderName, color, enabled)
         for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("Model") and (string.find(string.lower(obj.Name), folderName) or obj:FindFirstChild
+            if obj:IsA("Model") and (string.find(string.lower(obj.Name), folderName) or obj:FindFirstChildOfClass("Humanoid")) then
+                local foundHighlight = obj:FindFirstChild("ChevaCham")
+                if enabled then
+                    if not foundHighlight then
+                        local High = Instance.new("Highlight")
+                        High.Name = "ChevaCham"
+                        High.FillColor = color
+                        High.FillTransparency = 0.3
+                        High.OutlineTransparency = 1
+                        High.Adornee = obj
+                        High.Parent = obj
+                    end
+                else
+                    if foundHighlight then foundHighlight:Destroy() end
+                end
+            end
+        end
+    end
+
+    Toggles.ChamsKiller = CreateToggle(Pages["Visual"], "Chams Killer (Red Full)", false, nil, function(v)
+        SaveData.ChamsKiller = v
+        ApplyChams("ki
