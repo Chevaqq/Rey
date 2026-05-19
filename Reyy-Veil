@@ -1,6 +1,6 @@
 -- =============================================================================
--- PROJECT: CHEVA HUB (Violence District - FIXED VERSION)
--- COMPATIBILITY: Delta Executor (Mobile Optimized)
+-- PROJECT: CHEVA HUB (Violence District - ABSOLUTE FIXED VERSION)
+-- COMPATIBILITY: Delta Executor (Mobile Native PlayerGui)
 -- STYLE: Cyber Dark Blue & Black
 -- =============================================================================
 
@@ -10,7 +10,6 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
 
 -- Database Simulasi untuk Save/Load
 local SaveData = {
@@ -37,21 +36,12 @@ local SaveData = {
 
 local UserStatus = "None" -- "VIP", "Free", atau "None"
 
--- Penanganan Parent GUI agar PASTI MUNCUL di Delta Executor (Mobile)
+-- Pembuatan ScreenGui Langsung ke PlayerGui (Metode Paling Stabil & Pasti Muncul di Delta Mobile)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ChevaHub_Official"
+ScreenGui.Name = "ChevaHub_ViolenceDistrict_Official"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-local targetParent = CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if gethui then
-    ScreenGui.Parent = gethui()
-elseif syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = targetParent
-else
-    ScreenGui.Parent = targetParent
-end
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Fungsi Notifikasi Cyber
 local function ShowNotification(text)
@@ -315,7 +305,7 @@ ShowMainMenu = function()
     Pages["Main"].Visible = true
 
     -- =============================================================================
-    -- GENERATOR DUA-ARANG REKAYASA WIDGET (TOGGLE, BOX, BUTTON)
+    -- WIDGET ENGINE (TOGGLE, BOX, BUTTON)
     -- =============================================================================
     local function CreateToggle(parent, text, isVipFeature, restriction, callback)
         local displayName = text
@@ -423,7 +413,7 @@ ShowMainMenu = function()
     end
 
     -- =============================================================================
-    -- IMPLEMENTASI SELURUH FITUR GAMEPLAY (TIDAK ADA YANG DIHAPUS)
+    -- IMPLEMENTASI LOGIK SEURUH FITUR (TIDAK ADA YANG HILANG)
     -- =============================================================================
     local Toggles = {}
 
@@ -481,7 +471,7 @@ ShowMainMenu = function()
         SaveData.TwistOfFate = v
     end)
 
-    -- Visual Bulat FOV dengan UI Frame (Paling Stabil di Mobile)
+    -- Pengganti Drawing Ring Menggunakan Frame GUI Native (Sangat Aman & Pasti Muncul di HP)
     local FOVRing = Instance.new("Frame")
     FOVRing.Size = UDim2.new(0, SaveData.FOVSize * 2, 0, SaveData.FOVSize * 2)
     FOVRing.Position = UDim2.new(0.5, -SaveData.FOVSize, 0.5, -SaveData.FOVSize)
@@ -541,5 +531,7 @@ ShowMainMenu = function()
         PredBtn.Text = "Mode: " .. tostring(SaveData.AimPrediction)
     end)
 
-    -- --- TAB: VISUAL (CHAMS & SNAPLINES MOBILE RE-ENGINEERED) ---
-    local func
+    -- --- TAB: VISUAL (CHAMS & SNAPLINES) ---
+    local function ApplyChams(folderName, color, enabled)
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Model") and (string.find(string.lower(obj.Name), folderName) or obj:FindFirstChild
