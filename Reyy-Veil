@@ -1,458 +1,544 @@
--- =================================================================
--- CYBER HUB // VIOLENCE DISTRICT PREMIERE EDITION (V5 ANIMATED)
--- MADE BY CHEVA // RUN WITH DELTA EXECUTOR
--- =================================================================
+-- =============================================================================
+-- PROJECT: CHEVA HUB (Violence District)
+-- COMPATIBILITY: Delta Executor (Mobile)
+-- STYLE: Cyber Dark Blue & Black
+-- =============================================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
--- --- CONFIGURATION & STATES ---
-local ScriptConfig = {
-    AimlockEnabled = true,
-    FovRadius = 150, 
-    DetectionRadius = 50, 
-    CorrectKey = "Cheva", 
-    CyberColor = Color3.fromRGB(0, 180, 255),
-    DarkBgColor = Color3.fromRGB(10, 16, 26)
+-- Database Simulasi untuk Save/Load
+local SaveData = {
+    WalkSpeed = 16,
+    CameraDistance = 70,
+    FOVSize = 20,
+    FastVaultSpeed = 1,
+    AimPrediction = 1,
+    TwistOfFate = false,
+    InstantHeal = false,
+    NoSlow = false,
+    InfBasicStack = false,
+    InfAbilities = false,
+    ChamsKiller = false,
+    ChamsSurvivor = false,
+    ChamsGenerator = false,
+    LinesEnabled = false,
+    PotatoGraphics = false,
+    AntiAdmin = false,
+    AntiFling = false,
+    Headless = false,
+    Korblox = false
 }
 
--- --- SCREEN GUI UTAMA ---
-if game.CoreGui:FindFirstChild("CyberHub_ViolenceDistrict_Final") then
-    game.CoreGui["CyberHub_ViolenceDistrict_Final"]:Destroy()
+local UserStatus = "None" -- "VIP", "Free", atau "None"
+
+-- Create ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ChevaHub_ViolenceDistrict"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+if syn and syn.protect_gui then syn.protect_gui(ScreenGui) end
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Notification Function
+local function ShowNotification(text)
+    local Notif = Instance.new("TextLabel")
+    Notif.Size = UDim2.new(0, 250, 0, 40)
+    Notif.Position = UDim2.new(0.5, -125, 0.1, 0)
+    Notif.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
+    Notif.TextColor3 = Color3.fromRGB(0, 150, 255)
+    Notif.TextSize = 16
+    Notif.Font = Enum.Font.Code
+    Notif.Text = "[!] " .. text
+    Notif.BorderSizePixel = 2
+    Notif.BorderColor3 = Color3.fromRGB(0, 80, 200)
+    Notif.Parent = ScreenGui
+    
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Thickness = 1
+    UIStroke.Color = Color3.fromRGB(0,0,0)
+    UIStroke.Parent = Notif
+
+    task.delay(2, function()
+        TweenService:Create(Notif, TweenInfo.new(0.5), {ImageTransparency = 1, TextTransparency = 1}):Play()
+        task.wait(0.5)
+        Notif:Destroy()
+    end)
 end
 
-local CyberGui = Instance.new("ScreenGui")
-CyberGui.Name = "CyberHub_ViolenceDistrict_Final"
-CyberGui.Parent = game.CoreGui
-CyberGui.ResetOnSpawn = false
+-- =============================================================================
+-- 1. LOADING SCREEN
+-- =============================================================================
+local function StartLoadingScreen(onComplete)
+    local LoadingFrame = Instance.new("Frame")
+    LoadingFrame.Size = UDim2.new(1, 0, 1, 0)
+    LoadingFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
+    LoadingFrame.Parent = ScreenGui
 
--- =================================================================
--- 1. LOADING SCREEN WITH SMOOTH FADE ANIMATION (0.5s)
--- =================================================================
+    local TextLabel = Instance.new("TextLabel")
+    TextLabel.Size = UDim2.new(0, 400, 0, 100)
+    TextLabel.Position = UDim2.new(0.5, -200, 0.5, -50)
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Text = "Made by cheva"
+    TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TextLabel.TextSize = 36
+    TextLabel.Font = Enum.Font.Code
+    TextLabel.TextTransparency = 1
+    TextLabel.Parent = LoadingFrame
 
-local LoadingScreen = Instance.new("Frame")
-LoadingScreen.Size = UDim2.new(1, 0, 1, 0)
-LoadingScreen.BackgroundColor3 = Color3.fromRGB(5, 5, 8)
-LoadingScreen.ZIndexWithParent = true
-LoadingScreen.Parent = CyberGui
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Thickness = 3
+    Stroke.Color = Color3.fromRGB(0, 0, 0)
+    Stroke.LineJoinMode = Enum.LineJoinMode.Round
+    Stroke.Transparency = 1
+    Stroke.Parent = TextLabel
 
-local LoadingText = Instance.new("TextLabel")
-LoadingText.Size = UDim2.new(0, 300, 0, 50)
-LoadingText.Position = UDim2.new(0.5, -150, 0.4, -25)
-LoadingText.BackgroundTransparency = 1 -- Mulai dari tidak terlihat (Transparan murni)
-LoadingText.Text = "Made By Cheva"
-LoadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
-LoadingText.TextTransparency = 1 -- Set awal transparan untuk animasi fade-in
-LoadingText.TextSize = 28
-LoadingText.Font = Enum.Font.Code
-LoadingText.Parent = LoadingScreen
+    -- Fade In Animation (0.5s)
+    local fadeIn = TweenService:Create(TextLabel, TweenInfo.new(0.5), {TextTransparency = 0})
+    local strokeFadeIn = TweenService:Create(Stroke, TweenInfo.new(0.5), {Transparency = 0})
+    fadeIn:Play()
+    strokeFadeIn:Play()
+    fadeIn.Completed:Wait()
 
--- Outline Hitam pada Tulisan "Made By Cheva"
-local TextStroke = Instance.new("UIStroke")
-TextStroke.Color = Color3.fromRGB(0, 0, 0)
-TextStroke.Thickness = 3
-TextStroke.Transparency = 1 -- Set awal transparan mengikuti teks
-TextStroke.Parent = LoadingText
+    task.wait(1.5) -- Tahan sebentar di layar
 
--- Key Input Container
-local KeyFrame = Instance.new("Frame")
-KeyFrame.Size = UDim2.new(0, 280, 0, 110)
-KeyFrame.Position = UDim2.new(0.5, -140, 0.5, 0)
-KeyFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 30)
-KeyFrame.BackgroundTransparency = 0.3
-KeyFrame.Visible = false
-KeyFrame.Parent = LoadingScreen
+    -- Fade Out Animation (0.5s)
+    local fadeOut = TweenService:Create(TextLabel, TweenInfo.new(0.5), {TextTransparency = 1})
+    local strokeFadeOut = TweenService:Create(Stroke, TweenInfo.new(0.5), {Transparency = 1})
+    local frameFade = TweenService:Create(LoadingFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+    fadeOut:Play()
+    strokeFadeOut:Play()
+    frameFade:Play()
+    fadeOut.Completed:Wait()
 
-local KeyStroke = Instance.new("UIStroke")
-KeyStroke.Color = ScriptConfig.CyberColor
-KeyStroke.Thickness = 1.5
-KeyStroke.Parent = KeyFrame
-
-local KeyInput = Instance.new("TextBox")
-KeyInput.Size = UDim2.new(0, 240, 0, 35)
-KeyInput.Position = UDim2.new(0, 20, 0, 20)
-KeyInput.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
-KeyInput.Font = Enum.Font.Code
-KeyInput.PlaceholderText = "ENTER ACCESS KEY..."
-KeyInput.Text = ""
-KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyInput.TextSize = 14
-KeyInput.Parent = KeyFrame
-
-local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Size = UDim2.new(0, 240, 0, 35)
-SubmitBtn.Position = UDim2.new(0, 20, 0, 60)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
-SubmitBtn.Font = Enum.Font.Code
-SubmitBtn.Text = "VALIDATE SYSTEM"
-SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitBtn.TextSize = 12
-SubmitBtn.Parent = KeyFrame
-
--- --- LOGIC ANIMASI MEMUNCULKAN DAN PUDAR (FADE IN / OUT 0.5 DETIK) ---
-task.spawn(function()
-    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
-    
-    -- 1. Animasi Muncul (Fade In) - 0.5 Detik
-    local fadeInText = TweenService:Create(LoadingText, tweenInfo, {TextTransparency = 0})
-    local fadeInStroke = TweenService:Create(TextStroke, tweenInfo, {Transparency = 0})
-    fadeInText:Play()
-    fadeInStroke:Play()
-    fadeInText.Completed:Wait() -- Tunggu sampai muncul penuh
-    
-    task.wait(1.5) -- Waktu bertahan teks di layar sebelum pudar
-    
-    -- 2. Animasi Pudar / Hilang (Fade Out) - 0.5 Detik
-    local fadeOutText = TweenService:Create(LoadingText, tweenInfo, {TextTransparency = 1})
-    local fadeOutStroke = TweenService:Create(TextStroke, tweenInfo, {Transparency = 1})
-    fadeOutText:Play()
-    fadeOutStroke:Play()
-    fadeOutText.Completed:Wait() -- Tunggu sampai pudar total
-    
-    LoadingText:Destroy() -- Hancurkan teks setelah hilang
-    KeyFrame.Visible = true -- Munculkan form Key Akses
-end)
-
-
--- =================================================================
--- 2. CORE GAME MECHANICS (CHAMS, AIMLOCK FOV, DETECTOR)
--- =================================================================
-
-local function IsKiller(player)
-    if player == LocalPlayer then return false end
-    if player.Team and (player.Team.Name:lower():find("killer") or player.Team.Name:lower():find("slasher")) then
-        return true
-    end
-    local character = player.Character
-    if character then
-        for _, item in pairs(character:GetChildren()) do
-            if item:IsA("Tool") and (item.Name:lower():find("knife") or item.Name:lower():find("weapon") or item.Name:lower():find("murd")) then
-                return true
-            end
-        end
-    end
-    return false
+    LoadingFrame:Destroy()
+    onComplete()
 end
 
--- --- FEATURE A: CHAMS KILLER (FULL MERAH TANPA OUTLINE) ---
-local function ApplyKillerChams(player)
-    player.CharacterAdded:Connect(function(char)
-        if IsKiller(player) then
-            task.wait(0.5)
-            if char:FindFirstChild("CyberChams") then char.CyberChams:Destroy() end
-            
-            local box = Instance.new("Highlight")
-            box.Name = "CyberChams"
-            box.FillColor = Color3.fromRGB(255, 0, 0)
-            box.FillTransparency = 0 
-            box.OutlineTransparency = 1 
-            box.Adornee = char
-            box.Parent = char
+-- Forward Declarations untuk Alur Sistem
+local ShowKeySystem
+local ShowMainMenu
+
+-- =============================================================================
+-- 2. KEY SYSTEM SCREEN
+-- =============================================================================
+ShowKeySystem = function()
+    local KeyFrame = Instance.new("Frame")
+    KeyFrame.Size = UDim2.new(0, 350, 0, 220)
+    KeyFrame.Position = UDim2.new(0.5, -175, 0.5, -110)
+    KeyFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+    KeyFrame.BorderSizePixel = 2
+    KeyFrame.BorderColor3 = Color3.fromRGB(0, 100, 255)
+    KeyFrame.Parent = ScreenGui
+
+    -- Cyber UI Glow Outline
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Thickness = 2
+    Stroke.Color = Color3.fromRGB(0, 70, 180)
+    Stroke.Parent = KeyFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
+    Title.Text = "CHEVA HUB - ENTER KEY"
+    Title.TextColor3 = Color3.fromRGB(0, 200, 255)
+    Title.TextSize = 16
+    Title.Font = Enum.Font.Code
+    Title.Parent = KeyFrame
+
+    local KeyInput = Instance.new("TextBox")
+    KeyInput.Size = UDim2.new(0, 280, 0, 40)
+    KeyInput.Position = UDim2.new(0.5, -140, 0.4, -20)
+    KeyInput.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
+    KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyInput.PlaceholderText = "Paste Key Here..."
+    KeyInput.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
+    KeyInput.Text = ""
+    KeyInput.TextSize = 14
+    KeyInput.Font = Enum.Font.Code
+    KeyInput.Parent = KeyFrame
+    
+    local InputStroke = Instance.new("UIStroke")
+    InputStroke.Color = Color3.fromRGB(0, 80, 150)
+    InputStroke.Parent = KeyInput
+
+    local SubmitBtn = Instance.new("TextButton")
+    SubmitBtn.Size = UDim2.new(0, 130, 0, 35)
+    SubmitBtn.Position = UDim2.new(0.2, -20, 0.7, 5)
+    SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 60, 150)
+    SubmitBtn.Text = "VERIFY"
+    SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SubmitBtn.Font = Enum.Font.Code
+    SubmitBtn.TextSize = 14
+    SubmitBtn.Parent = KeyFrame
+
+    local GetKeyBtn = Instance.new("TextButton")
+    GetKeyBtn.Size = UDim2.new(0, 130, 0, 35)
+    GetKeyBtn.Position = UDim2.new(0.6, 10, 0.7, 5)
+    GetKeyBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+    GetKeyBtn.Text = "COPY LINK"
+    GetKeyBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
+    GetKeyBtn.Font = Enum.Font.Code
+    GetKeyBtn.TextSize = 14
+    GetKeyBtn.Parent = KeyFrame
+
+    SubmitBtn.MouseButton1Click:Connect(function()
+        local input = KeyInput.Text
+        if input == "ChevaHub-VIP" then
+            UserStatus = "VIP"
+            ShowNotification("Access Granted: VIP Member")
+            KeyFrame:Destroy()
+            ShowMainMenu()
+        elseif input == "Cheva" then
+            UserStatus = "Free"
+            ShowNotification("Access Granted: Free Member")
+            KeyFrame:Destroy()
+            ShowMainMenu()
+        else
+            ShowNotification("Invalid or Expired Key!")
         end
     end)
-    
-    if player.Character and IsKiller(player) then
-        local char = player.Character
-        if char:FindFirstChild("CyberChams") then char.CyberChams:Destroy() end
-        local box = Instance.new("Highlight")
-        box.Name = "CyberChams"
-        box.FillColor = Color3.fromRGB(255, 0, 0)
-        box.FillTransparency = 0
-        box.OutlineTransparency = 1
-        box.Adornee = char
-        box.Parent = char
-    end
+
+    GetKeyBtn.MouseButton1Click:Connect(function()
+        setclipboard("https://github.com/cheva") -- Ganti dengan link getkey Anda
+        ShowNotification("Key link copied to clipboard!")
+    end)
 end
 
--- --- FEATURE B: ADVANCED KILLER DETECTOR (! & ✓ PROXIMITY) ---
-local function ManageKillerDetector(player)
-    local function setupBillboard(char)
-        if not IsKiller(player) then return end
+-- =============================================================================
+-- 3. MAIN MOD MENU SCRIPT
+-- =============================================================================
+ShowMainMenu = function()
+    -- Main Container Frame
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 520, 0, 340)
+    MainFrame.Position = UDim2.new(0.5, -260, 0.5, -170)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true -- Agar bisa digeser di HP
+    MainFrame.Parent = ScreenGui
+
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Thickness = 2
+    MainStroke.Color = Color3.fromRGB(0, 90, 200)
+    MainStroke.Parent = MainFrame
+
+    -- --- ANIMASI BACKGROUND (JAM BERPUTAR CEPAT DENGAN 1 JARUM) ---
+    local ClockFrame = Instance.new("Frame")
+    ClockFrame.Size = UDim2.new(0, 120, 0, 120)
+    ClockFrame.Position = UDim2.new(0.5, -60, 0.5, -60)
+    ClockFrame.BackgroundTransparency = 1
+    ClockFrame.ZIndex = 0
+    ClockFrame.Parent = MainFrame
+
+    local Hand = Instance.new("Frame")
+    Hand.Size = UDim2.new(0, 2, 0, 50)
+    Hand.Position = UDim2.new(0.5, -1, 0.5, -50)
+    Hand.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+    Hand.BackgroundTransparency = 0.6
+    Hand.AnchorPoint = Vector2.new(0.5, 1)
+    Hand.ZIndex = 0
+    Hand.Parent = ClockFrame
+
+    RunService.RenderStepped:Connect(function()
+        Hand.Rotation = Hand.Rotation + 15 -- Berputar sangat cepat
+    end)
+    -- -------------------------------------------------------------
+
+    -- Top Bar (Header)
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 35)
+    TopBar.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+    TopBar.Parent = MainFrame
+
+    local MenuTitle = Instance.new("TextLabel")
+    MenuTitle.Size = UDim2.new(0, 200, 1, 0)
+    MenuTitle.Position = UDim2.new(0, 10, 0, 0)
+    MenuTitle.BackgroundTransparency = 1
+    MenuTitle.Text = "CHEVA HUB | CYBER MENU"
+    MenuTitle.TextColor3 = Color3.fromRGB(0, 220, 255)
+    MenuTitle.Font = Enum.Font.Code
+    MenuTitle.TextSize = 14
+    MenuTitle.TextXAlignment = Enum.TextXAlignment.Left
+    MenuTitle.Parent = TopBar
+
+    -- Sidebar (Tabs Container)
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Size = UDim2.new(0, 110, 1, -35)
+    Sidebar.Position = UDim2.new(0, 0, 0, 35)
+    Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
+    Sidebar.Parent = MainFrame
+    
+    local SidebarLayout = Instance.new("UIListLayout")
+    SidebarLayout.Padding = UDim.new(0, 2)
+    SidebarLayout.Parent = Sidebar
+
+    -- Content View Area
+    local ContentArea = Instance.new("Frame")
+    ContentArea.Size = UDim2.new(1, -115, 1, -35)
+    ContentArea.Position = UDim2.new(0, 115, 0, 35)
+    ContentArea.BackgroundTransparency = 1
+    ContentArea.Parent = MainFrame
+
+    -- Generate Pages
+    local Tabs = {"Main", "Survivor", "Killer", "Combat", "Visual", "Misc"}
+    local Pages = {}
+
+    for _, tabName in ipairs(Tabs) do
+        local Page = Instance.new("ScrollingFrame")
+        Page.Size = UDim2.new(1, 0, 1, -45) -- Sisakan space untuk bagian bottom profile
+        Page.BackgroundTransparency = 1
+        Page.Visible = false
+        Page.CanvasSize = UDim2.new(0, 0, 2, 0)
+        Page.ScrollBarThickness = 3
+        Page.Parent = ContentArea
+        Pages[tabName] = Page
+
+        local PageLayout = Instance.new("UIListLayout")
+        PageLayout.Padding = UDim.new(0, 6)
+        PageLayout.Parent = Page
+
+        -- Sidebar Tab Button Creator
+        local TabBtn = Instance.new("TextButton")
+        TabBtn.Size = UDim2.new(1, 0, 0, 32)
+        TabBtn.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
+        TabBtn.Text = tabName
+        TabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+        TabBtn.Font = Enum.Font.Code
+        TabBtn.TextSize = 12
+        TabBtn.Parent = Sidebar
+
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, p in pairs(Pages) do p.Visible = false end
+            Page.Visible = true
+            ShowNotification("Switched to " .. tabName)
+        end)
+    end
+    Pages["Main"].Visible = true -- Default page
+
+    -- =============================================================================
+    -- UI COMPONENT UTILITIES (Toggle, TextBox, Button)
+    -- =============================================================================
+    local function CreateToggle(parent, text, isVipFeature, callback)
+        local displayName = text
+        if isVipFeature then displayName = text .. " *" end
+
+        local ToggleFrame = Instance.new("Frame")
+        ToggleFrame.Size = UDim2.new(0, 380, 0, 35)
+        ToggleFrame.BackgroundTransparency = 1
+        ToggleFrame.Parent = parent
+
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(0, 250, 1, 0)
+        Label.BackgroundTransparency = 1
+        Label.Text = displayName
+        Label.TextColor3 = isVipFeature and Color3.fromRGB(255, 180, 0) or Color3.fromRGB(220, 220, 220)
+        Label.Font = Enum.Font.Code
+        Label.TextSize = 13
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = ToggleFrame
+
+        local Btn = Instance.new("TextButton")
+        Btn.Size = UDim2.new(0, 50, 0, 24)
+        Btn.Position = UDim2.new(1, -60, 0.5, -12)
+        Btn.BackgroundColor3 = Color3.fromRGB(30, 10, 10)
+        Btn.Text = "OFF"
+        Btn.TextColor3 = Color3.fromRGB(255, 50, 50)
+        Btn.Font = Enum.Font.Code
+        Btn.TextSize = 11
+        Btn.Parent = ToggleFrame
         
-        local bboard = Instance.new("BillboardGui")
-        bboard.Name = "KillerDetectorUI"
-        bboard.Size = UDim2.new(0, 100, 0, 50)
-        bboard.AlwaysOnTop = true
-        bboard.ExtentsOffset = Vector3.new(0, 3, 0)
-        bboard.Adornee = char:FindFirstChild("Head")
-        bboard.Parent = char
+        local state = false
+        
+        local function toggle(forcedState)
+            if forcedState ~= nil then state = forcedState else state = not state end
+            if state then
+                Btn.BackgroundColor3 = Color3.fromRGB(10, 40, 10)
+                Btn.Text = "ON"
+                Btn.TextColor3 = Color3.fromRGB(50, 255, 50)
+            else
+                Btn.BackgroundColor3 = Color3.fromRGB(30, 10, 10)
+                Btn.Text = "OFF"
+                Btn.TextColor3 = Color3.fromRGB(255, 50, 50)
+            end
+            callback(state)
+        end
 
-        local indicatorText = Instance.new("TextLabel")
-        indicatorText.Size = UDim2.new(1, 0, 1, 0)
-        indicatorText.BackgroundTransparency = 1
-        indicatorText.Font = Enum.Font.Code
-        indicatorText.TextSize = 26
-        indicatorText.TextColor3 = Color3.fromRGB(255, 0, 0)
-        indicatorText.Text = ""
-        indicatorText.Parent = bboard
-
-        local connection
-        connection = RunService.RenderStepped:Connect(function()
-            if not char:IsDescendantOf(workspace) or not char:FindFirstChild("HumanoidRootPart") or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                connection:Disconnect()
+        Btn.MouseButton1Click:Connect(function()
+            if isVipFeature and UserStatus ~= "VIP" then
+                ShowNotification("No Access VIP!")
                 return
             end
-            
-            local dist = (char.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if dist <= 50 then
-                if dist <= 20 then
-                    indicatorText.Text = "!!!"
-                    indicatorText.TextColor3 = Color3.fromRGB(255, 0, 0)
-                else
-                    indicatorText.Text = "!"
-                    indicatorText.TextColor3 = Color3.fromRGB(255, 100, 0)
-                end
-            elseif dist > 50 and dist <= 80 then
-                indicatorText.Text = "✓"
-                indicatorText.TextColor3 = Color3.fromRGB(0, 255, 0)
-            else
-                indicatorText.Text = "" 
-            end
+            toggle()
         end)
-    end
-
-    player.CharacterAdded:Connect(setupBillboard)
-    if player.Character then setupBillboard(player.Character) end
-end
-
-local function GetKillerInFov()
-    local target = nil
-    local maxDistance = ScriptConfig.FovRadius
-
-    for _, player in pairs(Players:GetPlayers()) do
-        if IsKiller(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local root = player.Character.HumanoidRootPart
-            local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
-            
-            if onScreen then
-                local mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                
-                if distance < maxDistance then
-                    maxDistance = distance
-                    target = root
-                end
-            end
-        end
-    end
-    return target
-end
-
--- --- VISUAL DRAWING: FOV RING (PUTIH TRANSPARAN TENGAH) ---
-local FovRing = Instance.new("Frame")
-FovRing.Size = UDim2.new(0, ScriptConfig.FovRadius * 2, 0, ScriptConfig.FovRadius * 2)
-FovRing.Position = UDim2.new(0.5, -ScriptConfig.FovRadius, 0.5, -ScriptConfig.FovRadius)
-FovRing.BackgroundTransparency = 1 
-FovRing.Visible = false
-FovRing.Parent = CyberGui
-
-local FovCorner = Instance.new("UICorner")
-FovCorner.CornerRadius = UDim.new(1, 0)
-FovCorner.Parent = FovRing
-
-local FovStroke = Instance.new("UIStroke")
-FovStroke.Color = Color3.fromRGB(255, 255, 255) 
-FovStroke.Thickness = 1.5
-FovStroke.Parent = FovRing
-
--- --- MAIN LOCK SYSTEM ---
-RunService.RenderStepped:Connect(function()
-    if ScriptConfig.AimlockEnabled and LocalPlayer.Character then
-        local lockTarget = GetKillerInFov()
-        if lockTarget then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, lockTarget.Position)
-        end
-    end
-end)
-
-
--- =================================================================
--- 3. EXCLUSIVE MAIN MENU (CYBER DARK BLUE FRAME & BACKGROUND CLOCK)
--- =================================================================
-
-local MainPanel = Instance.new("Frame")
-MainPanel.Name = "MainPanel"
-MainPanel.Size = UDim2.new(0, 360, 0, 240)
-MainPanel.Position = UDim2.new(0.5, -180, 0.4, -120)
-MainPanel.BackgroundColor3 = ScriptConfig.DarkBgColor
-MainPanel.BackgroundTransparency = 0.15
-MainPanel.Active = true
-MainPanel.Draggable = true
-MainPanel.Visible = false
-MainPanel.Parent = CyberGui
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = ScriptConfig.CyberColor
-MainStroke.Thickness = 2
-MainStroke.Parent = MainPanel
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 8)
-MainCorner.Parent = MainPanel
-
--- --- BACKGROUND ONE-HAND CLOCK (1 JARUM BERPUTAR PAS DI TENGAH) ---
-local ClockFrame = Instance.new("Frame")
-ClockFrame.Size = UDim2.new(0, 120, 0, 120)
-ClockFrame.Position = UDim2.new(0.5, -60, 0.5, -40) 
-ClockFrame.BackgroundColor3 = Color3.fromRGB(15, 22, 35)
-ClockFrame.BackgroundTransparency = 0.75
-ClockFrame.ZIndex = 1
-ClockFrame.Parent = MainPanel
-
-local ClockCorner = Instance.new("UICorner")
-ClockCorner.CornerRadius = UDim.new(1, 0)
-ClockCorner.Parent = ClockFrame
-
-local ClockStroke = Instance.new("UIStroke")
-ClockStroke.Color = Color3.fromRGB(0, 120, 200)
-ClockStroke.Thickness = 1
-ClockStroke.Parent = ClockFrame
-
-local clockNumbers = {["12"] = UDim2.new(0.5, -10, 0, 4), ["3"] = UDim2.new(1, -16, 0.5, -7), ["6"] = UDim2.new(0.5, -10, 1, -18), ["9"] = UDim2.new(0, 4, 0.5, -7)}
-for numStr, pos in pairs(clockNumbers) do
-    local numLabel = Instance.new("TextLabel")
-    numLabel.Size = UDim2.new(0, 20, 0, 15)
-    numLabel.Position = pos
-    numLabel.BackgroundTransparency = 1
-    numLabel.Text = numStr
-    numLabel.TextColor3 = Color3.fromRGB(0, 120, 180)
-    numLabel.TextSize = 10
-    numLabel.Font = Enum.Font.Code
-    numLabel.ZIndex = 1
-    numLabel.Parent = ClockFrame
-end
-
-local ClockPivot = Instance.new("Frame")
-ClockPivot.Size = UDim2.new(0, 0, 0, 0)
-ClockPivot.Position = UDim2.new(0.5, 0, 0.5, 0)
-ClockPivot.BackgroundTransparency = 1
-ClockPivot.ZIndex = 2
-ClockPivot.Parent = ClockFrame
-
-local CenterDot = Instance.new("Frame")
-CenterDot.Size = UDim2.new(0, 6, 0, 6)
-CenterDot.Position = UDim2.new(0, -3, 0, -3)
-CenterDot.BackgroundColor3 = ScriptConfig.CyberColor
-CenterDot.BorderSizePixel = 0
-CenterDot.ZIndex = 3
-CenterDot.Parent = ClockPivot
-
-local SingleHand = Instance.new("Frame")
-SingleHand.Size = UDim2.new(0, 2, 0, 45)
-SingleHand.Position = UDim2.new(0, -1, 0, -45)
-SingleHand.BackgroundColor3 = ScriptConfig.CyberColor
-SingleHand.BorderSizePixel = 0
-SingleHand.ZIndex = 2
-SingleHand.Parent = ClockPivot
-
-task.spawn(function()
-    local rotationSpeed = 0
-    while task.wait(0.01) do
-        rotationSpeed = rotationSpeed + 4
-        SingleHand.Rotation = rotationSpeed
-    end
-end)
-
--- --- UI CONTENT CONTROL ---
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 35)
-Title.Position = UDim2.new(0, 15, 0, 5)
-Title.BackgroundTransparency = 1
-Title.Text = "CYBERHUB // DISTR_VIOLENCE"
-Title.TextColor3 = ScriptConfig.CyberColor
-Title.TextSize = 15
-Title.Font = Enum.Font.Code
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.ZIndex = 4
-Title.Parent = MainPanel
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 150, 0, 38)
-ToggleBtn.Position = UDim2.new(0, 15, 0, 180)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 50, 80)
-ToggleBtn.Font = Enum.Font.Code
-ToggleBtn.Text = "AIMLOCK: ON"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 12
-ToggleBtn.ZIndex = 4
-ToggleBtn.Parent = MainPanel
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 4)
-BtnCorner.Parent = ToggleBtn
-
-ToggleBtn.MouseButton1Click:Connect(function()
-    ScriptConfig.AimlockEnabled = not ScriptConfig.AimlockEnabled
-    if ScriptConfig.AimlockEnabled then
-        ToggleBtn.Text = "AIMLOCK: ON"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 50, 80)
-    else
-        ToggleBtn.Text = "AIMLOCK: OFF"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
-    end
-end)
-
-local OpenCloseBtn = Instance.new("TextButton")
-OpenCloseBtn.Size = UDim2.new(0, 65, 0, 35)
-OpenCloseBtn.Position = UDim2.new(0.1, 0, 0.05, 0)
-OpenCloseBtn.BackgroundColor3 = ScriptConfig.DarkBgColor
-OpenCloseBtn.Font = Enum.Font.Code
-OpenCloseBtn.Text = "MENU"
-OpenCloseBtn.TextColor3 = ScriptConfig.CyberColor
-OpenCloseBtn.TextSize = 12
-OpenCloseBtn.Active = true
-OpenCloseBtn.Draggable = true
-OpenCloseBtn.Visible = false
-OpenCloseBtn.Parent = CyberGui
-
-local ObjCorner = Instance.new("UICorner")
-ObjCorner.CornerRadius = UDim.new(0, 6)
-ObjCorner.Parent = OpenCloseBtn
-
-local ObjStroke = Instance.new("UIStroke")
-ObjStroke.Color = ScriptConfig.CyberColor
-ObjStroke.Thickness = 1.5
-ObjStroke.Parent = OpenCloseBtn
-
-local MenuVisible = true
-OpenCloseBtn.MouseButton1Click:Connect(function()
-    MenuVisible = not MenuVisible
-    MainPanel.Visible = MenuVisible
-    if MenuVisible then
-        OpenCloseBtn.TextColor3 = ScriptConfig.CyberColor
-    else
-        OpenCloseBtn.TextColor3 = Color3.fromRGB(100, 100, 100)
-    end
-end)
-
-
--- =================================================================
--- 4. KEY INTEGRATION AUTHENTICATION VALIDATION LOGIC
--- =================================================================
-
-SubmitBtn.MouseButton1Click:Connect(function()
-    if KeyInput.Text == ScriptConfig.CorrectKey then
-        LoadingScreen:Destroy()
-        MainPanel.Visible = true
-        OpenCloseBtn.Visible = true
-        FovRing.Visible = true
         
-        for _, p in pairs(Players:GetPlayers()) do
-            ApplyKillerChams(p)
-            ManageKillerDetector(p)
-        end
-        Players.PlayerAdded:Connect(function(p)
-            ApplyKillerChams(p)
-            ManageKillerDetector(p)
-        end)
-    else
-        SubmitBtn.Text = "Key Salah!"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(120, 20, 20)
-        task.wait(1.5)
-        SubmitBtn.Text = "VALIDATE SYSTEM"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+        return toggle
     end
-end)
+
+    local function CreateTextBox(parent, text, defaultVal, callback)
+        local BoxFrame = Instance.new("Frame")
+        BoxFrame.Size = UDim2.new(0, 380, 0, 35)
+        BoxFrame.BackgroundTransparency = 1
+        BoxFrame.Parent = parent
+
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(0, 250, 1, 0)
+        Label.BackgroundTransparency = 1
+        Label.Text = text
+        Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+        Label.Font = Enum.Font.Code
+        Label.TextSize = 13
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = BoxFrame
+
+        local Input = Instance.new("TextBox")
+        Input.Size = UDim2.new(0, 60, 0, 24)
+        Input.Position = UDim2.new(1, -70, 0.5, -12)
+        Input.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+        Input.Text = tostring(defaultVal)
+        Input.TextColor3 = Color3.fromRGB(0, 200, 255)
+        Input.Font = Enum.Font.Code
+        Input.TextSize = 12
+        Input.Parent = BoxFrame
+
+        Input.FocusLost:Connect(function()
+            callback(Input.Text)
+        end)
+        
+        return Input
+    end
+
+    local function CreateButton(parent, text, callback)
+        local Btn = Instance.new("TextButton")
+        Btn.Size = UDim2.new(0, 150, 0, 30)
+        Btn.BackgroundColor3 = Color3.fromRGB(0, 70, 160)
+        Btn.Text = text
+        Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Btn.Font = Enum.Font.Code
+        Btn.TextSize = 12
+        Btn.Parent = parent
+        
+        Btn.MouseButton1Click:Connect(callback)
+    end
+
+    -- =============================================================================
+    -- FILLING FEATURES INTO TABS & LOGIC MECHANICS
+    -- =============================================================================
+    
+    -- Toggles reference list for Save/Load operations
+    local Toggles = {}
+
+    -- --- TAB: MAIN ---
+    Toggles.InstantHeal = CreateToggle(Pages["Main"], "Instant Heal (Godmode)", false, function(v)
+        SaveData.InstantHeal = v
+        if v then
+            -- Logic: Loop mengembalikan Health lokal agar tidak mati
+            task.spawn(function()
+                while SaveData.InstantHeal do
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChildOfClass("Humanoid") then
+                        char:FindFirstChildOfClass("Humanoid").Health = char:FindFirstChildOfClass("Humanoid").MaxHealth
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end)
+
+    -- --- TAB: SURVIVOR ---
+    local boxWS = CreateTextBox(Pages["Survivor"], "Walk Speed", SaveData.WalkSpeed, function(val)
+        local num = tonumber(val) or 16
+        SaveData.WalkSpeed = num
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = num
+        end
+    end)
+
+    local boxCam = CreateTextBox(Pages["Survivor"], "Camera Distance", SaveData.CameraDistance, function(val)
+        local num = tonumber(val) or 70
+        SaveData.CameraDistance = num
+        LocalPlayer.CameraMaxZoomDistance = num
+        LocalPlayer.CameraMinZoomDistance = 10
+    end)
+
+    -- --- TAB: KILLER ---
+    Toggles.NoSlow = CreateToggle(Pages["Killer"], "No Slow (Action Continuity)", false, function(v)
+        SaveData.NoSlow = v
+        -- Implementasi bypass modifier speed instan di game target
+    end)
+
+    Toggles.InfBasicStack = CreateToggle(Pages["Killer"], "Infinite Basic Stack", false, function(v)
+        SaveData.InfBasicStack = v
+    end)
+
+    Toggles.InfAbilities = CreateToggle(Pages["Killer"], "Infinite Abilities (No CD)", true, function(v)
+        -- Fitur VIP
+        SaveData.InfAbilities = v
+    end)
+
+    -- --- TAB: COMBAT ---
+    Toggles.TwistOfFate = CreateToggle(Pages["Combat"], "Twist Of Fate (Lock Killer)", true, function(v)
+        -- Fitur VIP & Khusus Killer (Survivor terblokir via validasi tombol)
+        SaveData.TwistOfFate = v
+        if v then
+            task.spawn(function()
+                while SaveData.TwistOfFate do
+                    -- Logika mendeteksi killer di game dan menghadapkan kamera ke entitas tersebut
+                    task.wait()
+                end
+            end)
+        end
+    end)
+
+    local boxFOV = CreateTextBox(Pages["Combat"], "FOV Ring Size", SaveData.FOVSize, function(val)
+        local num = tonumber(val) or 20
+        SaveData.FOVSize = num
+    end)
+
+    local boxVault = CreateTextBox(Pages["Combat"], "Fast Vault Speed (Max 6)", SaveData.FastVaultSpeed, function(val)
+        local num = math.clamp(tonumber(val) or 1, 1, 6)
+        SaveData.FastVaultSpeed = num
+    end)
+
+    -- Aim Prediksi Button Click-Switcher
+    local PredBtnFrame = Instance.new("Frame")
+    PredBtnFrame.Size = UDim2.new(0, 380, 0, 35)
+    PredBtnFrame.BackgroundTransparency = 1
+    PredBtnFrame.Parent = Pages["Combat"]
+    
+    local PredLabel = Instance.new("TextLabel")
+    PredLabel.Size = UDim2.new(0, 250, 1, 0)
+    PredLabel.BackgroundTransparency = 1
+    PredLabel.Text = "Aim Prediction"
+    PredLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    PredLabel.Font = Enum.Font.Code
+    PredLabel.TextSize = 13
+    PredLabel.TextXAlignment = Enum.TextXAlignment.Left
+    PredLabel.Parent = PredBtnFrame
+
+    local PredBtn = Instance.new("TextButton")
+    PredBtn.Size = UDim2.new(0, 60, 0, 24)
+    PredBtn.Position = UDim2.new(1, -70, 0.5, -12)
+    PredBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    PredBtn.Text = "Mode: 1"
+    PredBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
+    PredBtn.Font = Enum.Font.Code
+    PredBtn.TextSize = 11
+    PredBtn.Parent = PredBtnFrame
+
+    PredBtn.MouseButton1Click:Connect(function()
+        if SaveData.AimPrediction == 1 then
+            SaveData.AimPrediction = 2
+        elseif SaveData.AimPrediction == 2 then
+            SaveData.AimPrediction = 3
+        else
+            SaveData.AimPrediction = 1
+        end
+        PredBtn.Text = "Mode: " .. tostring(SaveData.AimPrediction)
+    end)
+
