@@ -1,24 +1,26 @@
--- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V11 (HYPER OP ENGINE) ]] --
+-- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT SCRIPT V12 (ULTRA OP DISPATCH) ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- State Target Global
+-- State Pemain
 local CurrentTarget = nil
+local IsTouchingScreen = false
 
 -- Konfigurasi Fitur Utama
 local Config = {
-    ChamsKiller = true,
-    ChamsSurvivor = true,
-    SilentAimSurvivor = true, -- Anti-Miss Survivor (Hanya Mengincar Killer)
-    SilentAimVeil = true      -- Anti-Miss Veil Killer (Hanya Mengincar Survivor)
+    ChamsVisuals = true,
+    SilentAimSurvivor = true, -- Hanya Mengincar Killer (Prediksi + Tracer Orange)
+    AimlockVeil = true,       -- Hanya Mengincar Survivor (Look-At Camera Lock Sesuai Video)
+    AimbotSmoothness = 0.2    -- Nilai transisi tarikan kamera
 }
 
 -- [[ UI SYSTEM SIMPLE (TRANSPARAN & OPEN/CLOSE) ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ReyHub_ViolenceDistrict_V11"
+ScreenGui.Name = "ReyHub_ViolenceDistrict_V12"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -34,8 +36,8 @@ ToggleBtn.Font = Enum.Font.SourceSansBold
 ToggleBtn.Parent = ScreenGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 220)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -110)
+MainFrame.Size = UDim2.new(0, 320, 0, 200)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -100)
 MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 MainFrame.BackgroundTransparency = 0.5
 MainFrame.BorderSizePixel = 2
@@ -43,18 +45,13 @@ MainFrame.BorderColor3 = Color3.fromRGB(0, 255, 255)
 MainFrame.Parent = ScreenGui
 
 ToggleBtn.MouseButton1Click:Connect(function()
-    if MainFrame.Visible then
-        MainFrame.Visible = false
-        ToggleBtn.Text = "OPEN"
-    else
-        MainFrame.Visible = true
-        ToggleBtn.Text = "CLOSE"
-    end
+    MainFrame.Visible = not MainFrame.Visible
+    ToggleBtn.Text = MainFrame.Visible and "CLOSE" or "OPEN"
 end)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Text = "REYHUB HYPER ENGINE V11"
+Title.Text = "REYHUB ULTIMATE ENGINE V12"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 16
@@ -74,22 +71,16 @@ local function CreateToggle(name, pos, configKey)
 
     Btn.MouseButton1Click:Connect(function()
         Config[configKey] = not Config[configKey]
-        if Config[configKey] then
-            Btn.Text = name .. " : ON"
-            Btn.TextColor3 = Color3.fromRGB(50, 255, 50)
-        else
-            Btn.Text = name .. " : OFF"
-            Btn.TextColor3 = Color3.fromRGB(255, 50, 50)
-        end
+        Btn.Text = name .. (Config[configKey] and " : ON" or " : OFF")
+        Btn.TextColor3 = Config[configKey] and Color3.fromRGB(50, 255, 50) or Color3.fromRGB(255, 50, 50)
     end)
 end
 
-CreateToggle("PREDIKSI SURVIVOR -> KILLER", UDim2.new(0.5, -130, 0.25, 0), "SilentAimSurvivor")
-CreateToggle("PREDIKSI KILLER -> SURVIVOR", UDim2.new(0.5, -130, 0.50, 0), "SilentAimVeil")
-CreateToggle("UNIVERSAL ESP / CHAMS", UDim2.new(0.5, -130, 0.75, 0), "ChamsKiller")
+CreateToggle("SURVIVOR PREDICTION (ANTI-MISS)", UDim2.new(0.5, -130, 0.25, 0), "SilentAimSurvivor")
+CreateToggle("VEIL AIMLOCK (VIDEO MODE)", UDim2.new(0.5, -130, 0.60, 0), "AimlockVeil")
 
 
--- [[ DETEKSI TIM & ROLE KETAT ]] --
+-- [[ UTILITIES DETEKSI ROLE ]] --
 local function IsKillerPlayer(player)
     if player:GetAttribute("Role") == "Killer" or player.Name:lower():find("killer") or (player.Character and player.Character:FindFirstChild("Tombak")) then
         return true
@@ -115,10 +106,14 @@ local function GetClosestTarget(targetType)
                 end
 
                 if isValid then
-                    local Dist = (v.Character.HumanoidRootPart.Position - Camera.CFrame.Position).Magnitude
-                    if Dist < ShortestDistance then
-                        ShortestDistance = Dist
-                        Target = v
+                    local ScreenPos, OnScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+                    if OnScreen then
+                        local MousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                        local Mag = (Vector2.new(ScreenPos.X, ScreenPos.Y) - MousePos).Magnitude
+                        if Mag < ShortestDistance then
+                            ShortestDistance = Mag
+                            Target = v
+                        end
                     end
                 end
             end
@@ -127,19 +122,18 @@ local function GetClosestTarget(targetType)
     return Target
 end
 
--- [[ INTERFACE CANVAS TRACER (SISTEM MOBILE LIGHTWEIGHT) ]] --
-local CanvasGui = Instance.new("Folder")
-CanvasGui.Name = "ReyHub_Tracers_V11"
-CanvasGui.Parent = ScreenGui
+-- [[ INTERFACE LINE TRACER ORANGE (SURVIVOR) ]] --
+local CanvasGui = Instance.new("Folder", ScreenGui)
+CanvasGui.Name = "ReyHub_Tracers_V12"
 
-local function DrawMobileTracer(startPos3D, endPos3D, color)
-    local LineFrame = Instance.new("Frame")
-    LineFrame.BackgroundColor3 = color
+local function DrawOrangeTracer(startPos3D, endPos3D)
+    local LineFrame = Instance.new("Frame", CanvasGui)
+    LineFrame.BackgroundColor3 = Color3.fromRGB(255, 110, 0)
     LineFrame.BorderSizePixel = 0
     LineFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    LineFrame.Parent = CanvasGui
 
-    local function UpdateLine()
+    local Connection
+    Connection = RunService.RenderStepped:Connect(function()
         if not LineFrame or not LineFrame.Parent then return end
         local StartPos, StartOnScreen = Camera:WorldToViewportPoint(startPos3D)
         local EndPos, EndOnScreen = Camera:WorldToViewportPoint(endPos3D)
@@ -155,23 +149,24 @@ local function DrawMobileTracer(startPos3D, endPos3D, color)
         else
             LineFrame.Visible = false
         end
-    end
-
-    local Connection = RunService.RenderStepped:Connect(UpdateLine)
+    end)
     
-    -- Efek kilat: Garis langsung hancur otomatis setelah 0.07 detik (Anti-Stuck Peluru)
-    task.delay(0.07, function()
+    task.delay(0.08, function()
         Connection:Disconnect()
         LineFrame:Destroy()
     end)
 end
 
--- [[ CORE RENDERING LOOP (VISUAL ONLY - ANTI-LAG & ANTI-STUCK) ]] --
+-- [[ DETEKSI SENTUHAN INPUT MOBILE UNTUK ANTI-STUCK ]] --
+UserInputService.TouchStarted:Connect(function() IsTouchingScreen = true end)
+UserInputService.TouchEnded:Connect(function() IsTouchingScreen = false end)
+
+-- [[ MAIN RENDERING ENGINE ]] --
 RunService.RenderStepped:Connect(function()
-    -- Cek Target Real-time berdasarkan status role saat ini
     local IAmKiller = IsKillerPlayer(LocalPlayer)
     
-    if IAmKiller and Config.SilentAimVeil then
+    -- Pemilihan Target Otomatis Berdasarkan Peran
+    if IAmKiller and Config.AimlockVeil then
         CurrentTarget = GetClosestTarget("SurvivorOnly")
     elseif not IAmKiller and Config.SilentAimSurvivor then
         CurrentTarget = GetClosestTarget("KillerOnly")
@@ -179,66 +174,63 @@ RunService.RenderStepped:Connect(function()
         CurrentTarget = nil
     end
 
-    -- Sistem Chams Efisien
-    if Config.ChamsKiller then
+    -- Visual ESP Chams
+    if Config.ChamsVisuals then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
                 local Highlight = p.Character:FindFirstChildOfClass("Highlight")
-                local killerCheck = IsKillerPlayer(p)
-
-                if killerCheck then
-                    if not Highlight then Highlight = Instance.new("Highlight", p.Character) end
-                    Highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                    Highlight.FillTransparency = 0.4
-                else
-                    if not Highlight then Highlight = Instance.new("Highlight", p.Character) end
-                    Highlight.FillColor = Color3.fromRGB(0, 255, 0)
-                    Highlight.FillTransparency = 0.4
-                end
+                if not Highlight then Highlight = Instance.new("Highlight", p.Character) end
+                Highlight.FillColor = IsKillerPlayer(p) and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+                Highlight.FillTransparency = 0.5
             end
+        end
+    end
+
+    -- EKSEKUSI VEIL AIMLOCK (PERSIS SEPERTI DI VIDEO + SISTEM ANTI-STUCK)
+    if IAmKiller and Config.AimlockVeil and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+        -- Jika jari kamu sedang menggeser layar manual, kunci kamera dijeda agar tidak macet/stuck
+        if not IsTouchingScreen then
+            local TargetRoot = CurrentTarget.Character.HumanoidRootPart
+            local Distance = (TargetRoot.Position - Camera.CFrame.Position).Magnitude
+            
+            -- Perhitungan Prediksi Kecepatan Target (Anti-Miss Bergerak)
+            local PredictionFactor = Distance / 850 
+            local PredictedPosition = TargetRoot.Position + (TargetRoot.AssemblyLinearVelocity * PredictionFactor) + Vector3.new(0, 0.2, 0)
+            
+            -- Perputaran Kamera Menggunakan Metode Smooth Lerp
+            local NewLookAt = CFrame.lookAt(Camera.CFrame.Position, PredictedPosition)
+            Camera.CFrame = Camera.CFrame:Lerp(NewLookAt, Config.AimbotSmoothness)
         end
     end
 end)
 
--- [[ HIGH-TIER METAMETHOD INJECTION (ANTI-MISS MUTLAK) ]] --
-local OldIndex
-OldIndex = hookmetamethod(game, "__index", function(Self, Key)
-    if not checkcaller() then
-        
-        -- 1. KONDISI JIKA KAMU ADALAH KILLER (VEIL) -> MENGINCAR SURVIVOR
-        if Config.SilentAimVeil and CurrentTarget and not IsKillerPlayer(CurrentTarget) then
-            if CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-                local TargetRoot = CurrentTarget.Character.HumanoidRootPart
-                
-                -- Intersepsi data fisik Tombak agar langsung masuk ke koordinat target
-                if Key == "CFrame" and (Self.Name:lower():find("tombak") or Self.Name:lower():find("spear") or Self.Name:lower():find("handle")) then
-                    return TargetRoot.CFrame
-                elseif Key == "Position" and (Self.Name:lower():find("tombak") or Self.Name:lower():find("spear")) then
-                    return TargetRoot.Position
+-- [[ INTERSEPSI SERVER (ANTI-MISS MUTLAK) ]] --
+local OldNamecall
+OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
+    local Args = {...}
+    local Method = getnamecallmethod()
+
+    if not checkcaller() and (Method == "Raycast" or Method == "FindPartOnRayWithIgnoreList") then
+        if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+            local TargetRoot = CurrentTarget.Character.HumanoidRootPart
+            local Distance = (TargetRoot.Position - Camera.CFrame.Position).Magnitude
+            local PredictedPosition = TargetRoot.Position + (TargetRoot.AssemblyLinearVelocity * (Distance / 850))
+
+            -- Kondisi 1: Jika kamu Survivor menembak Killer -> Muncul Tracer Orange
+            if not IsKillerPlayer(LocalPlayer) and Config.SilentAimSurvivor and IsKillerPlayer(CurrentTarget) then
+                local MyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if MyRoot then
+                    task.spawn(function() DrawOrangeTracer(MyRoot.Position, TargetRoot.Position) end)
                 end
             end
-        end
 
-        -- 2. KONDISI JIKA KAMU ADALAH SURVIVOR -> MENGINCAR KILLER
-        if Config.SilentAimSurvivor and CurrentTarget and IsKillerPlayer(CurrentTarget) then
-            if CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-                local TargetRoot = CurrentTarget.Character.HumanoidRootPart
-                
-                -- Intersepsi data peluru pistol agar otomatis berpindah ke tubuh Killer
-                if Key == "CFrame" and (Self.Name:lower():find("bullet") or Self.Name:lower():find("peluru") or Self.Name:lower():find("pistol")) then
-                    
-                    -- Gambar Tracer Line Orange instan (Hanya muncul dari Survivor ke Killer)
-                    local MyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    if MyRoot then
-                        task.spawn(function()
-                            DrawMobileTracer(MyRoot.Position, TargetRoot.Position, Color3.fromRGB(255, 110, 0))
-                        end)
-                    end
-                    
-                    return TargetRoot.CFrame
-                end
+            -- Pembelokan Proyektil Server untuk Menjamin Serangan Masuk (Anti-Miss)
+            if Method == "Raycast" and typeof(Args[1]) == "Vector3" and typeof(Args[2]) == "Vector3" then
+                Args[2] = (PredictedPosition - Args[1]).Unit * 9999
+            elseif Args[1] and typeof(Args[1]) == "Ray" then
+                Args[1] = Ray.new(Args[1].Origin, (PredictedPosition - Args[1].Origin).Unit * 9999)
             end
         end
     end
-    return OldIndex(Self, Key)
+    return OldNamecall(Self, unpack(Args))
 end)
