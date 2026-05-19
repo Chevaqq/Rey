@@ -1,376 +1,299 @@
--- [[ RCAHUB CORE ENGINE V6 - PREMIUM REWRITE ]] --
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
-local LocalPlayer = Players.LocalPlayer
+-- =================================================================
+-- VIOLENCE DISTRICT - CYBERPUNK SILENT AIM SCRIPT
+-- RUN WITH DELTA EXECUTOR
+-- =================================================================
 
-local Features = {
-    HealAura = false,
-    DetectKiller = false,
-    TwistOfFate = false
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- --- CONFIGURATION & STATES ---
+local ScriptConfig = {
+    SilentAimEnabled = true,
+    TargetTeamName = "Killers", -- Ganti sesuai nama tim Killer di game jika ada sistem tim resmi
+    CyberColor = Color3.fromRGB(0, 180, 255),
+    DarkBgColor = Color3.fromRGB(10, 16, 26)
 }
 
-local CORRECT_KEY = "Cheva"
-
--- [[ ANTI-RESET & MOBILE INJECTION PROTECTION ]] --
-local function getSafeContainer()
-    local success, cGui = pcall(function() return CoreGui end)
-    if success and cGui and not cGui:FindFirstChild("RCA_CyberCore_Premium") then 
-        return cGui 
+-- --- CUSTOM TARGET LOOKUP FOR KILLER ---
+-- Fungsi khusus untuk mendeteksi Killer berdasarkan item atau kondisi di Violence District
+local function IsKiller(player)
+    if player == LocalPlayer then return false end
+    
+    -- 1. Berdasarkan Tim (Jika game memakai sistem Team)
+    if player.Team and (player.Team.Name:lower():find("killer") or player.Team.Name:lower():find("slasher")) then
+        return true
     end
-    local pGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-    return pGui
-end
-
-local TargetParent = getSafeContainer()
-if TargetParent:FindFirstChild("RCA_CyberCore_Premium") then
-    TargetParent["RCA_CyberCore_Premium"]:Destroy()
-end
-
-local MainGui = Instance.new("ScreenGui")
-MainGui.Name = "RCA_CyberCore_Premium"
-MainGui.ResetOnSpawn = false -- Menjamin menu TIDAK AKAN HILANG saat in-game
-MainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-MainGui.Parent = TargetParent
-
--- [[ 1. HIGH-CYBER KEY SYSTEM WINDOW ]] --
-local KeyWindow = Instance.new("Frame")
-KeyWindow.Size = UDim2.new(0, 340, 0, 190)
-KeyWindow.Position = UDim2.new(0.5, -170, 0.5, -95)
-KeyWindow.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-KeyWindow.BackgroundTransparency = 0.05
-KeyWindow.BorderSizePixel = 1
-KeyWindow.BorderColor3 = Color3.fromRGB(255, 255, 255)
-KeyWindow.Parent = MainGui
-
-local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, 0, 0, 45)
-KeyTitle.Text = "SYSTEM AUTHORIZATION REQUIRED"
-KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyTitle.Font = Enum.Font.Code
-KeyTitle.TextSize = 14
-KeyTitle.BackgroundTransparency = 1
-KeyTitle.Parent = KeyWindow
-
-local KeyInput = Instance.new("TextBox")
-KeyInput.Size = UDim2.new(0.85, 0, 0, 38)
-KeyInput.Position = UDim2.new(0.075, 0, 0.35, 0)
-KeyInput.PlaceholderText = "ENTER PREMIUM ACCESS KEY..."
-KeyInput.Text = ""
-KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyInput.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
-KeyInput.Font = Enum.Font.Code
-KeyInput.TextSize = 13
-KeyInput.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-KeyInput.BorderColor3 = Color3.fromRGB(80, 80, 80)
-KeyInput.Parent = KeyWindow
-
-local KeySubmit = Instance.new("TextButton")
-KeySubmit.Size = UDim2.new(0.85, 0, 0, 38)
-KeySubmit.Position = UDim2.new(0.075, 0, 0.65, 0)
-KeySubmit.Text = "[ DECRYPT & START ]"
-KeySubmit.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeySubmit.Font = Enum.Font.Code
-KeySubmit.TextSize = 13
-KeySubmit.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-KeySubmit.BorderColor3 = Color3.fromRGB(255, 255, 255)
-KeySubmit.Parent = KeyWindow
-
--- [[ 2. MODERN COMPLEX UI WINDOW (PERSIS SPERTI DI SCREENSHOT) ]] --
-local MainWindow = Instance.new("Frame")
-MainWindow.Size = UDim2.new(0, 520, 0, 310) -- Ukuran proporsional tab seperti gambar
-MainWindow.Position = UDim2.new(0.5, -260, 0.5, -155)
-MainWindow.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-MainWindow.BackgroundTransparency = 0.15 -- Hitam transparan siber
-MainWindow.BorderSizePixel = 1
-MainWindow.BorderColor3 = Color3.fromRGB(40, 40, 40)
-MainWindow.Visible = false
-MainWindow.Active = true
-MainWindow.Draggable = true -- Navigasi geser lancar di layar HP
-MainWindow.Parent = MainGui
-
--- ULTRA-CYBER RUNNING CLOCK BACKGROUND MECHANISM
-local CyberClockBG = Instance.new("Frame")
-CyberClockBG.Size = UDim2.new(0, 180, 0, 180)
-CyberClockBG.Position = UDim2.new(0.5, -40, 0.5, -90)
-CyberClockBG.BackgroundTransparency = 1
-CyberClockBG.ZIndex = 0
-CyberClockBG.Parent = MainWindow
-
-local ClockCircle = Instance.new("Frame")
-ClockCircle.Size = UDim2.new(1, 0, 1, 0)
-ClockCircle.BackgroundTransparency = 1
-ClockCircle.BorderSizePixel = 1
-ClockCircle.BorderColor3 = Color3.fromRGB(255, 255, 255)
-ClockCircle.Parent = CyberClockBG
-
-local ClockPointer = Instance.new("Frame")
-ClockPointer.Size = UDim2.new(0, 2, 0, 85)
-ClockPointer.Position = UDim2.new(0.5, -1, 0.5, -85)
-ClockPointer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ClockPointer.BorderSizePixel = 0
-ClockPointer.Parent = ClockCircle
-
--- Loop rotasi jam super cepat ekstrim siber
-RunService.RenderStepped:Connect(function(dt)
-    if MainWindow.Visible then
-        ClockCircle.Rotation = (ClockCircle.Rotation + (dt * 2000)) % 360
-    end
-end)
-
--- LEFT SIDEBAR NAVIGATION (Bagian Menu Kiri)
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 140, 1, 0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = MainWindow
-
-local SeparatorLine = Instance.new("Frame")
-SeparatorLine.Size = UDim2.new(0, 1, 1, 0)
-SeparatorLine.Position = UDim2.new(1, 0, 0, 0)
-SeparatorLine.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-SeparatorLine.BorderSizePixel = 0
-SeparatorLine.Parent = Sidebar
-
-local ScriptTitle = Instance.new("TextLabel")
-ScriptTitle.Size = UDim2.new(1, 0, 0, 45)
-ScriptTitle.Text = "VD: REWRITE"
-ScriptTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-ScriptTitle.Font = Enum.Font.Code
-ScriptTitle.TextSize = 15
-ScriptTitle.BackgroundTransparency = 1
-ScriptTitle.Parent = Sidebar
-
--- RIGHT CONTENT CONTAINER (Wadah Fitur Sebelah Kanan)
-local Container = Instance.new("Frame")
-Container.Size = UDim2.new(1, -140, 1, 0)
-Container.Position = UDim2.new(0, 140, 0, 0)
-Container.BackgroundTransparency = 1
-Container.Parent = MainWindow
-
--- Tab-tab Buttons Kiri (Main, Visuals, UI Settings)
-local TabMainBtn = Instance.new("TextButton")
-TabMainBtn.Size = UDim2.new(0.9, 0, 0, 35)
-TabMainBtn.Position = UDim2.new(0.05, 0, 0.18, 0)
-TabMainBtn.Text = "  Main Features"
-TabMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TabMainBtn.Font = Enum.Font.Code
-TabMainBtn.TextSize = 13
-TabMainBtn.TextXAlignment = Enum.TextXAlignment.Left
-TabMainBtn.BackgroundTransparency = 1
-TabMainBtn.Parent = Sidebar
-
--- FLOATING TOGGLE (Tombol Buka/Tutup Menu Utama di HP)
-local FloatToggleBtn = Instance.new("TextButton")
-FloatToggleBtn.Size = UDim2.new(0, 75, 0, 32)
-FloatToggleBtn.Position = UDim2.new(0.05, 0, 0.12, 0)
-FloatToggleBtn.Text = "Toggle"
-FloatToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-FloatToggleBtn.Font = Enum.Font.Code
-FloatToggleBtn.TextSize = 13
-FloatToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-FloatToggleBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
-FloatToggleBtn.Visible = false
-FloatToggleBtn.Parent = MainGui
-
-FloatToggleBtn.MouseButton1Click:Connect(function()
-    MainWindow.Visible = not MainWindow.Visible
-end)
-
--- [[ SYSTEM PEMBUAT TOGGLE PREMIUM (DI SEBELAH KANAN) ]] --
-local function addPremiumToggle(name, yOffset, callback)
-    local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Size = UDim2.new(0.9, 0, 0, 40)
-    ToggleFrame.Position = UDim2.new(0.05, 0, 0, yOffset)
-    ToggleFrame.BackgroundTransparency = 1
-    ToggleFrame.Parent = Container
     
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.7, 0, 1, 0)
-    Label.Text = name
-    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Label.Font = Enum.Font.Code
-    Label.TextSize = 13
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.BackgroundTransparency = 1
-    Label.Parent = ToggleFrame
-    
-    -- Struktur Switch Bullet (Buat ON/OFF bulat/kotak premium)
-    local Switch = Instance.new("TextButton")
-    Switch.Size = UDim2.new(0, 45, 0, 22)
-    Switch.Position = UDim2.new(0.85, -25, 0.25, 0)
-    Switch.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    Switch.BorderColor3 = Color3.fromRGB(100, 100, 100)
-    Switch.Text = ""
-    Switch.Parent = ToggleFrame
-    
-    local IndicatorNode = Instance.new("Frame")
-    IndicatorNode.Size = UDim2.new(0, 14, 0, 14)
-    IndicatorNode.Position = UDim2.new(0.1, 0, 0.15, 0)
-    IndicatorNode.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-    IndicatorNode.BorderSizePixel = 0
-    IndicatorNode.Parent = Switch
-    
-    local isToggled = false
-    Switch.MouseButton1Click:Connect(function()
-        isToggled = not isToggled
-        if isToggled then
-            TweenService:Create(IndicatorNode, TweenInfo.new(0.15), {Position = UDim2.new(0.55, 0, 0.15, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-            TweenService:Create(Switch, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(60, 60, 60), BorderColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-        else
-            TweenService:Create(IndicatorNode, TweenInfo.new(0.15), {Position = UDim2.new(0.1, 0, 0.15, 0), BackgroundColor3 = Color3.fromRGB(150, 150, 150)}):Play()
-            TweenService:Create(Switch, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(30, 30, 30), BorderColor3 = Color3.fromRGB(100, 100, 100)}):Play()
-        end
-        callback(isToggled)
-    end)
-end
-
--- Injecting Fitur ke Menu Kanan Berurutan
-addPremiumToggle("Real Heal Aura", 45, function(v) Features.HealAura = v end)
-addPremiumToggle("Detek Killer", 95, function(v) Features.DetectKiller = v end)
-addPremiumToggle("Twist Of Fate", 145, function(v) Features.TwistOfFate = v end)
-
--- Key Submission Action
-KeySubmit.MouseButton1Click:Connect(function()
-    if KeyInput.Text == CORRECT_KEY then
-        KeyWindow:Destroy()
-        MainWindow.Visible = true
-        FloatToggleBtn.Visible = true
-    else
-        KeyInput.Text = ""
-        KeyInput.PlaceholderText = "ACCESS KEY DECRYPTION DENIED."
-    end
-end)
-
-
--- [[ 3. AUTOMATED GAMEPLAY CODES ]] --
-
--- Logic Pencari Killer Tercepat & Paling Valid
-local function fetchTargetKiller()
-    local targetUnit = nil
-    local shortestDist = math.huge
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local isKiller = false
-            if player.Character:FindFirstChild("Head") and player.Character.Head:FindFirstChild("Nametag") then
-                isKiller = true
-            elseif player.Character:FindFirstChildOfClass("Tool") or (player:FindFirstChild("Role") and player.Role.Value == "Killer") then
-                isKiller = true
+    -- 2. Berdasarkan Tool/Senjata yang dipegang (e.g. Pisau/Gergaji)
+    local character = player.Character
+    if character then
+        for _, item in pairs(character:GetChildren()) do
+            if item:IsA("Tool") and (item.Name:lower():find("knife") or item.Name:lower():find("weapon") or item.Name:lower():find("murd")) then
+                return true
             end
+        end
+    end
+    
+    return false
+end
+
+-- --- SILENT AIM CORE ENGINE ---
+-- Mendapatkan target Killer terdekat yang posisinya valid
+local function GetClosestKiller()
+    local closestTarget = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if IsKiller(player) then
+            local character = player.Character
+            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             
-            if isKiller and player.Character:FindFirstChildOfClass("Humanoid") and player.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local calculatedDist = (LocalPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                    if calculatedDist < shortestDist then
-                        shortestDist = calculatedDist
-                        targetUnit = player
+            if rootPart and humanoid and humanoid.Health > 0 then
+                -- Hitung jarak antara karakter kita dan Killer
+                local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if myRoot then
+                    local distance = (rootPart.Position - myRoot.Position).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        closestTarget = rootPart
                     end
                 end
             end
         end
     end
-    return targetUnit, shortestDist
+    return closestTarget
 end
 
--- REAL INDIKATOR (! DAN ✅ DI ATAS KEPALA KILLER)
-local TargetTag = Instance.new("BillboardGui")
-TargetTag.Size = UDim2.new(0, 65, 0, 65)
-TargetTag.AlwaysOnTop = true
-TargetTag.ExtentsOffset = Vector3.new(0, 3.8, 0)
+-- Hooking system tembakan via Namecall (Metamethod Hooking)
+-- Tetap mendeteksi target meskipun peluru diarahkan ke tempat lain (tembak angin)
+local gmt = getrawmetatable(game)
+setreadonly(gmt, false)
+local oldNamecall = gmt.__namecall
 
-local TagLabel = Instance.new("TextLabel")
-TagLabel.Size = UDim2.new(1, 0, 1, 0)
-TagLabel.BackgroundTransparency = 1
-TagLabel.Font = Enum.Font.Code
-TagLabel.TextSize = 38
-TagLabel.Parent = TargetTag
-
-task.spawn(function()
-    while task.wait(0.15) do
-        local killerEntity, distance = fetchTargetKiller()
-        if Features.DetectKiller and killerEntity and killerEntity.Character and killerEntity.Character:FindFirstChild("Head") then
-            TargetTag.Parent = killerEntity.Character.Head
-            if distance <= 30 then
-                TagLabel.Text = "!"
-                TagLabel.TextColor3 = Color3.fromRGB(255, 0, 0) -- Merah mutlak di bawah 30 meter
+gmt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    
+    if ScriptConfig.SilentAimEnabled and (method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" or method == "Raycast") then
+        local targetPart = GetClosestKiller()
+        if targetPart then
+            -- Membelokkan arah vector peluru langsung menuju posisi kepala/badan Killer target
+            if method == "Raycast" then
+                local origin = args[1]
+                args[2] = (targetPart.Position - origin).Unit * 1000
             else
-                TagLabel.Text = "✅"
-                TagLabel.TextColor3 = Color3.fromRGB(0, 255, 0) -- Hijau aman di atas 30 meter
+                local origin = args[1].Origin
+                args[1] = Ray.new(origin, (targetPart.Position - origin).Unit * 1000)
             end
-        else
-            TargetTag.Parent = nil
+            return oldNamecall(self, unpack(args))
         end
+    end
+    return oldNamecall(self, ...)
+end)
+setreadonly(gmt, true)
+
+
+-- =================================================================
+-- MODERN CYBERPUNK UI GENERATOR (DARK BLUE WITH ANALOG CLOCK)
+-- =================================================================
+
+-- Destroy GUI lama jika sengaja di-execute ulang
+if game.CoreGui:FindFirstChild("CyberHub_ViolenceDistrict") then
+    game.CoreGui["CyberHub_ViolenceDistrict"]:Destroy()
+end
+
+-- --- SCREEN GUI ---
+local CyberGui = Instance.new("ScreenGui")
+CyberGui.Name = "CyberHub_ViolenceDistrict"
+CyberGui.Parent = game.CoreGui
+CyberGui.ResetOnSpawn = false
+
+-- --- MAIN PANEL ---
+local MainPanel = Instance.new("Frame")
+MainPanel.Name = "MainPanel"
+MainPanel.Size = UDim2.new(0, 360, 0, 240)
+MainPanel.Position = UDim2.new(0.5, -180, 0.4, -120)
+MainPanel.BackgroundColor3 = ScriptConfig.DarkBgColor
+MainPanel.BackgroundTransparency = 0.15
+MainPanel.BorderSizePixel = 0
+MainPanel.Active = true
+MainPanel.Draggable = true
+MainPanel.Parent = CyberGui
+
+-- Cyber Border Glow Effect
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = ScriptConfig.CyberColor
+UIStroke.Thickness = 2
+UIStroke.Parent = MainPanel
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainPanel
+
+-- --- TITLE BAR ---
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, -20, 0, 35)
+Title.Position = UDim2.new(0, 15, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "CYBER HUB // DISTR_VIOLENCE"
+Title.TextColor3 = ScriptConfig.CyberColor
+Title.TextSize = 16
+Title.Font = Enum.Font.Code
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainPanel
+
+-- --- ANALOG CYBER CLOCK BACKGROUND ---
+local ClockFrame = Instance.new("Frame")
+ClockFrame.Name = "AnalogClock"
+ClockFrame.Size = UDim2.new(0, 110, 0, 110)
+ClockFrame.Position = UDim2.new(1, -130, 0.5, -45)
+ClockFrame.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
+ClockFrame.BackgroundTransparency = 0.6
+ClockFrame.BorderSizePixel = 0
+ClockFrame.Parent = MainPanel
+
+local ClockCorner = Instance.new("UICorner")
+ClockCorner.CornerRadius = UDim.new(1, 0) -- Circle shape
+ClockCorner.Parent = ClockFrame
+
+local ClockStroke = Instance.new("UIStroke")
+ClockStroke.Color = ScriptConfig.CyberColor
+ClockStroke.Thickness = 1
+ClockStroke.Parent = ClockFrame
+
+-- Center Dot for Clock
+local CenterDot = Instance.new("Frame")
+CenterDot.Size = UDim2.new(0, 6, 0, 6)
+CenterDot.Position = UDim2.new(0.5, -3, 0.5, -3)
+CenterDot.BackgroundColor3 = ScriptConfig.CyberColor
+CenterDot.BorderSizePixel = 0
+CenterDot.Parent = ClockFrame
+
+-- Generate Numbers (12, 3, 6, 9) inside Cyber Clock
+local clockNumbers = {["12"] = UDim2.new(0.5, -10, 0, 5), ["3"] = UDim2.new(1, -15, 0.5, -7), ["6"] = UDim2.new(0.5, -10, 1, -20), ["9"] = UDim2.new(0, 5, 0.5, -7)}
+for numStr, pos in pairs(clockNumbers) do
+    local numLabel = Instance.new("TextLabel")
+    numLabel.Size = UDim2.new(0, 20, 0, 15)
+    numLabel.Position = pos
+    numLabel.BackgroundTransparency = 1
+    numLabel.Text = numStr
+    numLabel.TextColor3 = ScriptConfig.CyberColor
+    numLabel.TextSize = 10
+    numLabel.Font = Enum.Font.Code
+    numLabel.Parent = ClockFrame
+end
+
+-- Clock Hands (Jarum Jam & Menit)
+local HourHand = Instance.new("Frame")
+HourHand.Size = UDim2.new(0, 2, 0, 25)
+HourHand.AnchorPoint = Vector2.new(0.5, 1)
+HourHand.Position = UDim2.new(0.5, 0, 0.5, 0)
+HourHand.BackgroundColor3 = ScriptConfig.CyberColor
+HourHand.BorderSizePixel = 0
+HourHand.Parent = ClockFrame
+
+local MinuteHand = Instance.new("Frame")
+MinuteHand.Size = UDim2.new(0, 1.5, 0, 40)
+MinuteHand.AnchorPoint = Vector2.new(0.5, 1)
+MinuteHand.Position = UDim2.new(0.5, 0, 0.5, 0)
+MinuteHand.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MinuteHand.BorderSizePixel = 0
+MinuteHand.Parent = ClockFrame
+
+-- Thread Logic untuk Update Jarum Jam Real-time
+spawn(function()
+    while task.wait(1) do
+        local date = os.date("*t")
+        local hourAngle = (date.hour % 12) * 30 + date.min * 0.5
+        local minAngle = date.min * 6
+        HourHand.Rotation = hourAngle
+        MinuteHand.Rotation = minAngle
     end
 end)
 
--- REAL HEAL AURA BYPASS MECHANICS
-task.spawn(function()
-    while task.wait(0.1) do
-        if Features.HealAura and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local root = LocalPlayer.Character.HumanoidRootPart
-            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            
-            -- Trigger healing server-side
-            if hum and hum.Health < hum.MaxHealth then
-                pcall(function()
-                    for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-                        if remote:IsA("RemoteEvent") and (remote.Name:lower():find("heal") or remote.Name:lower():find("med")) then
-                            remote:FireServer()
-                        end
-                    end
-                end)
-            end
-            
-            -- Auto-Revive Sekutu
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    if (root.Position - player.Character.HumanoidRootPart.Position).Magnitude <= 14 then
-                        for _, prompt in pairs(player.Character:GetDescendants()) do
-                            if prompt:IsA("ProximityPrompt") then
-                                fireproximityprompt(prompt)
-                            end
-                        end
-                    end
-                end
-            end
-            
-            -- Efek Aura Ungu Real-Time Sesuai Video Rekaman
-            local p = Instance.new("Part")
-            p.Size = Vector3.new(2.5, 0.1, 2.5)
-            p.CFrame = root.CFrame * CFrame.new(0, -2.4, 0)
-            p.Anchored = true
-            p.CanCollide = false
-            p.Color = Color3.fromRGB(175, 0, 255)
-            p.Material = Enum.Material.Neon
-            p.Transparency = 0.4
-            p.Parent = workspace
-            
-            local m = Instance.new("SpecialMesh")
-            m.MeshType = Enum.MeshType.Cylinder
-            m.Parent = p
-            
-            TweenService:Create(p, TweenInfo.new(0.2), {Size = Vector3.new(7, 0.05, 7), Transparency = 1}):Play()
-            game:GetService("Debris"):AddItem(p, 0.2)
-        end
+
+-- --- TOGGLE BUTTON (SILENT AIM LOCK KILLER) ---
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleSilentAim"
+ToggleBtn.Size = UDim2.new(0, 180, 0, 40)
+ToggleBtn.Position = UDim2.new(0, 15, 0, 65)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 50, 80)
+ToggleBtn.Font = Enum.Font.Code
+ToggleBtn.Text = "SILENT AIM: ON"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 14
+ToggleBtn.Parent = MainPanel
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 4)
+BtnCorner.Parent = ToggleBtn
+
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Color = ScriptConfig.CyberColor
+BtnStroke.Thickness = 1
+BtnStroke.Parent = ToggleBtn
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    ScriptConfig.SilentAimEnabled = not ScriptConfig.SilentAimEnabled
+    if ScriptConfig.SilentAimEnabled then
+        ToggleBtn.Text = "SILENT AIM: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 50, 80)
+        ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+        ToggleBtn.Text = "SILENT AIM: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
+        ToggleBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     end
 end)
 
--- TWIST OF FATE (OPTIMIZED AIMLOCK MURNI - ANTI-STUCK KAMERA MOBILE)
-RunService.RenderStepped:Connect(function()
-    if Features.TwistOfFate and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local targetPlayer, _ = fetchTargetKiller()
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local killerRoot = targetPlayer.Character.HumanoidRootPart
-            
-            -- Hanya berputar mengunci saat menekan/menggunakan senjata (Tool) agar kontrol analog gerak jari tidak kaku/stuck
-            local heldTool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
-            if heldTool then
-                local rawLookPosition = Vector3.new(killerRoot.Position.X, LocalPlayer.Character.HumanoidRootPart.Position.Y, killerRoot.Position.Z)
-                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(LocalPlayer.Character.HumanoidRootPart.Position, rawLookPosition)
-            end
-        end
+-- --- WATERMARK / INFO TEXT ---
+local InfoText = Instance.new("TextLabel")
+InfoText.Size = UDim2.new(0, 180, 0, 50)
+InfoText.Position = UDim2.new(0, 15, 0, 120)
+InfoText.BackgroundTransparency = 1
+InfoText.Text = "Target Lock: Killer Only\nStatus: Secure [Delta]"
+InfoText.TextColor3 = Color3.fromRGB(120, 150, 180)
+InfoText.TextSize = 12
+InfoText.Font = Enum.Font.Code
+InfoText.TextXAlignment = Enum.TextXAlignment.Left
+InfoText.Parent = MainPanel
+
+
+-- --- FLOATING OPEN / CLOSE BUTTON ---
+local OpenCloseBtn = Instance.new("TextButton")
+OpenCloseBtn.Name = "CyberToggleMenu"
+OpenCloseBtn.Size = UDim2.new(0, 60, 0, 35)
+OpenCloseBtn.Position = UDim2.new(0.1, 0, 0.05, 0) -- Posisinya pas di layar HP agar mudah dijangkau
+OpenCloseBtn.BackgroundColor3 = ScriptConfig.DarkBgColor
+OpenCloseBtn.Font = Enum.Font.Code
+OpenCloseBtn.Text = "MENU"
+OpenCloseBtn.TextColor3 = ScriptConfig.CyberColor
+OpenCloseBtn.TextSize = 12
+OpenCloseBtn.Active = true
+OpenCloseBtn.Draggable = true -- Bisa digeser sesuka hati di HP
+OpenCloseBtn.Parent = CyberGui
+
+local ObjCorner = Instance.new("UICorner")
+ObjCorner.CornerRadius = UDim.new(0, 6)
+ObjCorner.Parent = OpenCloseBtn
+
+local ObjStroke = Instance.new("UIStroke")
+ObjStroke.Color = ScriptConfig.CyberColor
+ObjStroke.Thickness = 1.5
+ObjStroke.Parent = OpenCloseBtn
+
+-- Mekanisme Minimalkan UI saat tombol di klik
+local MenuVisible = true
+OpenCloseBtn.MouseButton1Click:Connect(function()
+    MenuVisible = not MenuVisible
+    MainPanel.Visible = MenuVisible
+    if MenuVisible then
+        OpenCloseBtn.TextColor3 = ScriptConfig.CyberColor
+    else
+        OpenCloseBtn.TextColor3 = Color3.fromRGB(100, 100, 100)
     end
 end)
