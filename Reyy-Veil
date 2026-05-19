@@ -1,24 +1,20 @@
--- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT V9 (PERFECT VIDEO REPLIKA) ]] --
+-- [[ REYHUB / ACCOORNNHUB - VIOLENCE DISTRICT V10 (ULTRA LIGHT & ANTI-LAG) ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-
--- State Global
-local CurrentTarget = nil
-local IsHoldingSpear = false
 
 -- Konfigurasi Fitur
 local Config = {
     ChamsSurvivor = true,
-    SilentAimVeil = true,
-    AimbotSmoothness = 0.18 -- Kecepatan tarikan kamera halus seperti di video
+    SilentAimVeil = true
 }
 
--- [[ UI SYSTEM SIMPLE (TRANSPARAN & OPEN/CLOSE) ]] --
+-- [[ UI SYSTEM SIMPLE (TRANSPARAN & RINGAN) ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ReyHub_ViolenceDistrict_V9"
+ScreenGui.Name = "ReyHub_ViolenceDistrict_V10"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -54,7 +50,7 @@ end)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Text = "VEIL SILENT AIM (VIDEO VIBES)"
+Title.Text = "VEIL SILENT AIM V10 (ANTI-LAG)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 16
@@ -85,10 +81,10 @@ local function CreateToggle(name, pos, configKey)
 end
 
 CreateToggle("CHAMS SURVIVOR (GREEN)", UDim2.new(0.5, -120, 0.35, 0), "ChamsSurvivor")
-CreateToggle("SILENT VEIL (AUTO LOCK)", UDim2.new(0.5, -120, 0.65, 0), "SilentAimVeil")
+CreateToggle("SILENT VEIL (ANTI-LAG)", UDim2.new(0.5, -120, 0.65, 0), "SilentAimVeil")
 
 
--- [[ UTILITIES: DETEKSI ROLE & CEK TOMBAK ]] --
+-- [[ UTILITIES ]] --
 local function IsSurvivor(player)
     if player ~= LocalPlayer and player:GetAttribute("Role") ~= "Killer" and not player.Name:lower():find("killer") then
         return true
@@ -99,9 +95,8 @@ end
 local function CheckIfHoldingSpear()
     local Char = LocalPlayer.Character
     if Char then
-        -- Mengecek apakah ada objek Tombak/Weapon di dalam karakter (artinya sedang dipegang)
         for _, tool in pairs(Char:GetChildren()) do
-            if tool:IsA("Tool") or tool.Name:lower():find("tombak") or tool.Name:lower():find("spear") or tool.Name:lower():find("weapon") then
+            if tool:IsA("Tool") or tool.Name:lower():find("tombak") or tool.Name:lower():find("spear") then
                 return true
             end
         end
@@ -133,65 +128,58 @@ local function GetClosestSurvivor()
 end
 
 
--- [[ RENDERING LOOP ENGINE ]] --
+-- [[ OPTIMIZED LIGHT RENDER LOOP ]] --
 RunService.RenderStepped:Connect(function()
-    CurrentTarget = GetClosestSurvivor()
-    IsHoldingSpear = CheckIfHoldingSpear()
+    if not Config.ChamsSurvivor then return end
 
-    -- 1. CHAMS SURVIVOR (HIJAU TRANSURAN)
+    -- Loop Chams dioptimalkan agar tidak memicu memory leak atau lag patah-patah
     for _, p in pairs(Players:GetPlayers()) do
         if IsSurvivor(p) and p.Character then
             local Highlight = p.Character:FindFirstChildOfClass("Highlight")
-            if Config.ChamsSurvivor then
-                if not Highlight then
-                    Highlight = Instance.new("Highlight", p.Character)
-                end
+            if not Highlight then
+                Highlight = Instance.new("Highlight")
                 Highlight.FillColor = Color3.fromRGB(0, 255, 0)
                 Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                 Highlight.FillTransparency = 0.5
                 Highlight.OutlineTransparency = 0
-                Highlight.Enabled = true
-            else
-                if Highlight then Highlight:Destroy() end
+                Highlight.Parent = p.Character
             end
         end
-    end
-
-    -- 2. DYNAMIC CAMERA LOCK (Hanya Mengunci Saat Pegang Tombak)
-    if Config.SilentAimVeil and IsHoldingSpear and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        local TargetRoot = CurrentTarget.Character.HumanoidRootPart
-        
-        -- Kalkulasi prediksi lari target agar lemparan presisi
-        local TargetVelocity = TargetRoot.AssemblyLinearVelocity
-        local Distance = (TargetRoot.Position - Camera.CFrame.Position).Magnitude
-        local TimeToHit = Distance / 900
-        local PredictedPos = TargetRoot.Position + (TargetVelocity * TimeToHit) + Vector3.new(0, 0.2, 0)
-
-        -- Kamera mengikuti target secara halus (Lerp) hanya jika tombak dipegang
-        -- Jari kamu tetap bisa mengontrol arah geser sedikit (tidak nge-stuck kaku)
-        local TargetCFrame = CFrame.lookAt(Camera.CFrame.Position, PredictedPos)
-        Camera.CFrame = Camera.CFrame:Lerp(TargetCFrame, Config.AimbotSmoothness)
     end
 end)
 
 
--- [[ METAMETHOD HOOK FOR PERFECT HIT TOMBAK ]] --
-local OldNamecall
-OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
-    local Args = {...}
-    local Method = getnamecallmethod()
+-- [[ ONE-TAP ATTACK TRIGGER (ANTI-STUCK & ANTI-MISS) ]] --
+-- Fungsi ini hanya berjalan SATU KALI saat layar disentuh untuk menyerang, 
+-- sehingga performa HP tetap 100% lancar dan bebas lag patah-patah.
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not Config.SilentAimVeil or gameProcessed then return end
 
-    if Config.SilentAimVeil and IsHoldingSpear and (Method == "Raycast" or Method == "FindPartOnRayWithIgnoreList") then
-        if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-            local TargetRoot = CurrentTarget.Character.HumanoidRootPart
+    -- Mendeteksi ketukan di HP (Touch) atau klik layar saat melempar tombak
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if CheckIfHoldingSpear() then
+            local Target = GetClosestSurvivor()
             
-            -- Memaksa garis tembakan/lemparan server lurus 100% ke arah target
-            if Method == "Raycast" and typeof(Args[1]) == "Vector3" and typeof(Args[2]) == "Vector3" then
-                Args[2] = (TargetRoot.Position - Args[1]).Unit * 9999
-            elseif Args[1] and typeof(Args[1]) == "Ray" then
-                Args[1] = Ray.new(Args[1].Origin, (TargetRoot.Position - Args[1].Origin).Unit * 9999)
+            if Target and Target.Character and Target.Character:FindFirstChild("HumanoidRootPart") then
+                local TargetRoot = Target.Character.HumanoidRootPart
+                
+                -- Kalkulasi prediksi arah gerak instan
+                local TargetVelocity = TargetRoot.AssemblyLinearVelocity
+                local PredictedPos = TargetRoot.Position + (TargetVelocity * 0.15)
+                
+                -- Point-Lock Instan: Mengarahkan kamera tepat ke arah target hanya selama 1 frame saat menyerang
+                -- Jari kamu tidak akan pernah stuck karena kontrol langsung dikembalikan ke tangan kamu seketika setelah menyerang
+                Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, PredictedPos)
+                
+                -- Mengarahkan proyektil tombak secara internal ke koordinat target
+                local Weapon = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                if Weapon and Weapon:FindFirstChild("Handle") then
+                    task.spawn(function()
+                        -- Memastikan bagian peluncur alat sejajar dengan target agar tidak miss
+                        Weapon.Handle.CFrame = CFrame.lookAt(Weapon.Handle.Position, PredictedPos)
+                    end)
+                end
             end
         end
     end
-    return OldNamecall(Self, unpack(Args))
 end)
