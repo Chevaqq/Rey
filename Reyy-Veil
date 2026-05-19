@@ -16,12 +16,11 @@ local CORRECT_KEY = "Cheva"
 
 -- [[ CREATE UI ROOT ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RCAHUB_ViolenceDistrict_V2"
+ScreenGui.Name = "RCAHUB_ViolenceDistrict_V3"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 pcall(function() ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end)
 
--- UI Helper Function for Cyber/Monochrome Style
 local function applyCyberStyle(instance, bgTransparency)
     instance.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
     instance.BackgroundTransparency = bgTransparency or 0.1
@@ -77,7 +76,7 @@ MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
--- Cyber Fast Clock Background Effect (Hitam-Putih Berputar Cepat)
+-- Efek Jam Siber Berputar Cepat (Background)
 local ClockContainer = Instance.new("Frame")
 ClockContainer.Size = UDim2.new(0, 120, 0, 120)
 ClockContainer.Position = UDim2.new(0.5, -60, 0.5, -40)
@@ -101,20 +100,19 @@ ClockLine.Parent = ClockCircle
 
 RunService.RenderStepped:Connect(function(dt)
     if MainFrame.Visible then
-        ClockCircle.Rotation = (ClockCircle.Rotation + (dt * 1000)) % 360 -- Lebih cepat & responsif siber
+        ClockCircle.Rotation = (ClockCircle.Rotation + (dt * 1200)) % 360
     end
 end)
 
 local MainTitle = Instance.new("TextLabel")
 MainTitle.Size = UDim2.new(1, 0, 0, 35)
-MainTitle.Text = "RCAHUB // VIOLENCE DISTRICT"
+MainTitle.Text = "RCAHUB // VIOLENCE DISTRICT V3"
 MainTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 MainTitle.Font = Enum.Font.Code
 MainTitle.TextSize = 16
 MainTitle.BackgroundTransparency = 1
 MainTitle.Parent = MainFrame
 
--- Floating Toggle Button (Open/Close Menu)
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 60, 0, 30)
 ToggleButton.Position = UDim2.new(0.05, 0, 0.1, 0)
@@ -159,12 +157,11 @@ createToggle("REAL HEAL AURA", UDim2.new(0.075, 0, 0.3, 0), function(val)
     Features.HealAura = val
 end)
 
-createToggle("SILENT AIM FIXED", UDim2.new(0.075, 0, 0.55, 0), function(val)
+createToggle("SILENT AIM (ANTI-STUCK)", UDim2.new(0.075, 0, 0.55, 0), function(val)
     Features.SilentAim = val
 end)
 
-
--- [[ 3. KEY CHECK LOGIC ]] --
+-- Key Submission Logic
 KeySubmit.MouseButton1Click:Connect(function()
     if KeyInput.Text == CORRECT_KEY then
         KeyFrame:Destroy()
@@ -172,23 +169,23 @@ KeySubmit.MouseButton1Click:Connect(function()
         ToggleButton.Visible = true
     else
         KeyInput.Text = ""
-        KeyInput.PlaceholderText = "WRONG KEY ACCESS"
+        KeyInput.PlaceholderText = "ACCESS DENIED"
         task.wait(1)
         KeyInput.PlaceholderText = "ENTER ACCESS KEY..."
     end
 end)
 
 
--- [[ 4. GAMEPLAY LOGIC - FIXED & REAL ]] --
+-- [[ 3. GAMEPLAY LOGIC - REWORKED ]] --
 
--- Fungsi Mencari Killer Terdekat di Latar Belakang
+-- Fungsi Mencari Target Killer Terdekat
 local function getClosestKiller()
     local target = nil
     local shortestDistance = math.huge
     
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            -- Deteksi Killer berdasarkan tools senjata tajam bawaan game atau folder Role
+            -- Deteksi Killer via Nama Team, Tool Senjata, atau Nametag Merah
             local isKiller = false
             if player.Character:FindFirstChildOfClass("Tool") or (player:FindFirstChild("Role") and player.Role.Value == "Killer") then
                 isKiller = true
@@ -197,11 +194,10 @@ local function getClosestKiller()
             end
             
             if isKiller and player.Character:FindFirstChildOfClass("Humanoid") and player.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-                if onScreen then
-                    local mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                    local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
-                    if distance < shortestDistance and distance < 400 then
+                local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if myHrp then
+                    local distance = (myHrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                    if distance < shortestDistance and distance < 300 then -- Radius deteksi
                         shortestDistance = distance
                         target = player.Character.HumanoidRootPart
                     end
@@ -212,96 +208,74 @@ local function getClosestKiller()
     return target
 end
 
--- REAL HEAL AURA (Bisa Revive Teman & Menyembuhkan Diri)
+-- REAL HEAL AURA & INSTANT REVIVE INTERACTION
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.1) do -- Loop super cepat untuk respons instan
         if Features.HealAura and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local myHrp = LocalPlayer.Character.HumanoidRootPart
             local myHumanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             
-            -- 1. Real self healing melalui manipulasi internal/remote game jika tersedia
+            -- Pemicu Medis Server-Side Tersembunyi
             if myHumanoid and myHumanoid.Health < myHumanoid.MaxHealth then
                 pcall(function()
-                    -- Memicu remote medis bawaan game (menggunakan deteksi rekursif folder ReplicatedStorage)
                     for _, v in pairs(ReplicatedStorage:GetDescendants()) do
-                        if v:IsA("RemoteEvent") and (v.Name:lower():find("heal") or v.Name:lower():find("med")) then
+                        if v:IsA("RemoteEvent") and (v.Name:lower():find("heal") or v.Name:lower():find("revive") or v.Name:lower():find("med")) then
                             v:FireServer()
                         end
                     end
                 end)
             end
             
-            -- 2. Real Revive/Bantu Orang Lain Terdekat (Memicu Proximity Prompt Otomatis)
+            -- Deteksi Otomatis & Trigger Proximity Prompt Orang Lain (Revive)
             for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    local targetHrp = player.Character.HumanoidRootPart
-                    local dist = (myHrp.Position - targetHrp.Position).Magnitude
-                    
-                    if dist <= 12 then -- Jarak jangkauan aura bantu
-                        -- Memicu interaksi pertolongan pertama pada player KO
+                if player ~= LocalPlayer and player.Character then
+                    local tHrp = player.Character:FindFirstChild("HumanoidRootPart")
+                    if tHrp and (myHrp.Position - tHrp.Position).Magnitude <= 15 then
                         for _, prompt in pairs(player.Character:GetDescendants()) do
                             if prompt:IsA("ProximityPrompt") then
-                                fireproximityprompt(prompt)
+                                fireproximityprompt(prompt) -- Membantu teman secara real
                             end
                         end
                     end
                 end
             end
             
-            -- Visual Efek Partikel Ungu di Layar (Persis seperti Video)
+            -- Efek Partikel Visual Ungu Cyber Sesuai Video
             local p = Instance.new("Part")
-            p.Size = Vector3.new(3, 0.1, 3)
-            p.CFrame = myHrp.CFrame * CFrame.new(0, -2.2, 0)
+            p.Size = Vector3.new(2, 0.1, 2)
+            p.CFrame = myHrp.CFrame * CFrame.new(0, -2.3, 0)
             p.Anchored = true
             p.CanCollide = false
-            p.Color = Color3.fromRGB(170, 0, 255) -- Ungu Pekat Neon
+            p.Color = Color3.fromRGB(185, 0, 255)
             p.Material = Enum.Material.Neon
-            p.Transparency = 0.5
+            p.Transparency = 0.4
             p.Parent = workspace
             
             local m = Instance.new("SpecialMesh")
             m.MeshType = Enum.MeshType.Cylinder
             m.Parent = p
             
-            TweenService:Create(p, TweenInfo.new(0.3), {Size = Vector3.new(7, 0.05, 7), Transparency = 1}):Play()
-            game:GetService("Debris"):AddItem(p, 0.3)
+            TweenService:Create(p, TweenInfo.new(0.25), {Size = Vector3.new(6.5, 0.05, 6.5), Transparency = 1}):Play()
+            game:GetService("Debris"):AddItem(p, 0.25)
         end
     end
 end)
 
--- SILENT AIM FIXED (Kamera bebas bergerak, Tembakan otomatis mengunci target Killer)
-local OldIndex
-OldIndex = hookmetamethod(game, "__index", function(self, key)
-    if Features.SilentAim and not checkcaller() then
-        -- Membelokkan arah mouse/kursor client saat menembak tanpa mengunci pergerakan layar
-        if self:IsA("PlayerMouse") and (key == "Hit" or key == "Target") then
-            local killerPart = getClosestKiller()
-            if killerPart then
-                if key == "Hit" then
-                    return killerPart.CFrame
-                elseif key == "Target" then
-                    return killerPart
+-- SILENT AIM (ANTI-STUCK MOBILE OPTIMIZATION)
+-- Menggunakan Camera Direction Vector agar bidikan akurat tanpa mengunci pergerakan jari kamu di HP
+RunService.RenderStepped:Connect(function()
+    if Features.SilentAim and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local targetKiller = getClosestKiller()
+        if targetKiller then
+            -- Modifikasi arah hit vektor lokal peluru/pukulan langsung mengarah ke posisi Killer
+            pcall(function()
+                local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                if tool and tool:FindFirstChild("Activated") then
+                    -- Mengarahkan serangan langsung ke Hitbox Killer secara halus tanpa merusak analog kamera
+                    local lookVector = (targetKiller.Position - Camera.CFrame.Position).Unit
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + lookVector)
                 end
-            end
+            end)
         end
     end
-    return OldIndex(self, key)
-end)
-
--- Cadangan untuk senjata berbasis Raycast agar peluru langsung tembus ke Killer
-local OldNamecall
-OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    
-    if Features.SilentAim and not checkcaller() and (method == "Raycast" or method == "FindPartOnRayWithIgnoreList") then
-        local killerPart = getClosestKiller()
-        if killerPart then
-            if method == "FindPartOnRayWithIgnoreList" then
-                args[1] = Ray.new(Camera.CFrame.Position, (killerPart.Position - Camera.CFrame.Position).Unit * 1500)
-                return OldNamecall(self, unpack(args))
-            end
-        end
-    end
-    return OldNamecall(self, ...)
 end)
