@@ -1,4 +1,4 @@
--- [[ GUI CREATIONN ]]
+-- [[ GUI CREATION V4 ]]
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
@@ -8,7 +8,7 @@ local OpenCloseBtn = Instance.new("TextButton")
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Tombol Menu (Open/Close)
+-- Open/Close Button
 OpenCloseBtn.Name = "OpenCloseBtn"
 OpenCloseBtn.Parent = ScreenGui
 OpenCloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -45,8 +45,8 @@ Title.Parent = MainFrame
 Title.BackgroundTransparency = 1
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "DELTA GOD V3"
-Title.TextColor3 = Color3.fromRGB(0, 255, 255)
+Title.Text = "DELTA BYPASS V4"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.TextSize = 18
 
 -- Toggle Button
@@ -65,73 +65,59 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 8)
 toggleCorner.Parent = ToggleBtn
 
--- [[ GOD MODE V3 BYPASS LOGIC ]]
+-- [[ BYPASS DETECTION GOD MODE LOGIC ]]
 local player = game:GetService("Players").LocalPlayer
 local godModeEnabled = false
-local hbConnection
 
-local function runGodModeV3()
+local function runBypassGodMode()
     local char = player.Character
     if not char then return end
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
 
-    -- Langkah 1: Blokir fungsi TakeDamage bawaan game supaya pedang musuh tidak berefek
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    local oldNamecall = mt.__namecall
-
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        if godModeEnabled and self == humanoid and (method == "TakeDamage" or method == "takeDamage") then
-            return nil -- Mengabaikan perintah damage dari skrip pedang game
+    -- Taktik: Memutus semua koneksi event HealthChanged secara lokal
+    -- Ini mencegah skrip game menurunkan nyawa kamu tanpa menyentuh metatable game
+    if getconnections then
+        for _, connection in pairs(getconnections(humanoid.HealthChanged)) do
+            connection:Disable()
         end
-        return oldNamecall(self, ...)
-    end)
-    setreadonly(mt, true)
+    end
 
-    -- Langkah 2: Mengunci State agar tidak bisa diubah ke kondisi 'Mati' oleh server
+    -- Mengunci kondisi tubuh agar tidak mengirimkan sinyal kematian ke server
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
     
-    -- Ubah status health ke nilai yang sangat tinggi (math.huge terkadang di-reset game, kita pakai angka spesifik)
-    humanoid.MaxHealth = 999999
-    humanoid.Health = 999999
+    -- Mengubah nilai lokal secara konstan ke batas aman (bukan math.huge agar tidak dicurigai server)
+    humanoid.MaxHealth = 5000
+    humanoid.Health = 5000
 end
 
--- Loop konstan untuk menangani jika ada script server yang mencoba memaksa mengurangi darah
-hbConnection = game:GetService("RunService").Heartbeat:Connect(function()
+-- Monitor agar darah selalu penuh tanpa memicu pendeteksi namecall
+game:GetService("RunService").RenderStepped:Connect(function()
     if godModeEnabled and player.Character then
         local hum = player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
-            -- Paksa balik darah ke maksimal setiap milidetik sebelum server sempat memproses kematian
-            if hum.Health < hum.MaxHealth then
-                hum.Health = hum.MaxHealth
-            end
-            
-            -- Cegah mati kena batas Void bawah map
-            if player.Character.PrimaryPart and player.Character.PrimaryPart.Position.Y < -500 then
-                player.Character.PrimaryPart.CFrame = CFrame.new(0, 50, 0)
+            if hum.Health < 5000 then
+                hum.Health = 5000
             end
         end
     end
 end)
 
--- Tombol On/Off
+-- Button Toggle Connection
 ToggleBtn.MouseButton1Click:Connect(function()
     godModeEnabled = not godModeEnabled
     if godModeEnabled then
         ToggleBtn.Text = "God Mode: ON"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        runGodModeV3()
+        runBypassGodMode()
     else
         ToggleBtn.Text = "God Mode: OFF"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        -- Reset manual jika dimatikan
         if player.Character then
             local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            if hum then 
-                hum.MaxHealth = 100 
+            if hum then
+                hum.MaxHealth = 100
                 hum.Health = 100
                 hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
             end
@@ -139,15 +125,15 @@ ToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Tombol Open/Close Menu
+-- Open/Close Logic
 OpenCloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Deteksi saat karakter hidup kembali
+-- Auto re-apply pas mati/respawn
 player.CharacterAdded:Connect(function()
     if godModeEnabled then
         task.wait(0.5)
-        runGodModeV3()
+        runBypassGodMode()
     end
 end)
