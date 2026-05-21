@@ -45,8 +45,8 @@ Title.Parent = MainFrame
 Title.BackgroundTransparency = 1
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "DELTA ULTRA GOD"
-Title.TextColor3 = Color3.fromRGB(255, 69, 0)
+Title.Text = "DELTA GOD V3"
+Title.TextColor3 = Color3.fromRGB(0, 255, 255)
 Title.TextSize = 18
 
 -- Toggle Button
@@ -65,54 +65,52 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 8)
 toggleCorner.Parent = ToggleBtn
 
--- [[ ADVANCED GOD MODE LOGIC ]]
+-- [[ GOD MODE V3 BYPASS LOGIC ]]
 local player = game:GetService("Players").LocalPlayer
 local godModeEnabled = false
+local hbConnection
 
-local function runUltraGodMode()
+local function runGodModeV3()
     local char = player.Character
     if not char then return end
-    
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
 
-    -- METODE 1: Memutus koneksi mati ke server
-    humanoid.MaxHealth = math.huge
-    humanoid.Health = math.huge
+    -- Langkah 1: Blokir fungsi TakeDamage bawaan game supaya pedang musuh tidak berefek
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
+    local oldNamecall = mt.__namecall
+
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if godModeEnabled and self == humanoid and (method == "TakeDamage" or method == "takeDamage") then
+            return nil -- Mengabaikan perintah damage dari skrip pedang game
+        end
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(mt, true)
+
+    -- Langkah 2: Mengunci State agar tidak bisa diubah ke kondisi 'Mati' oleh server
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-
-    -- METODE 2: Hapus Skrip Darah / Health bawaan game yang biasanya ngatur damage
-    for _, child in pairs(char:GetChildren()) do
-        if child:IsA("Script") or child:IsA("LocalScript") then
-            if child.Name:lower():match("health") or child.Name:lower():match("damage") then
-                child:Destroy()
-            end
-        end
-    end
-
-    -- METODE 3: Desync Hitbox (Menghilangkan leher/neck joint secara lokal agar hit tidak masuk ke server)
-    -- Ini taktik paling ampuh buat game berantem/pukul-pukulan
-    local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-    local head = char:FindFirstChild("Head")
-    if head and torso then
-        local neck = head:FindFirstChild("Neck") or torso:FindFirstChild("Neck")
-        if neck and godModeEnabled then
-            -- Kita matikan fungsi 'Mati kalau kepala lepas'
-            pcall(function()
-                game:GetService("Workspace").CurrentCamera.CameraSubject = head
-                neck:Destroy() -- Menghancurkan koneksi damage server
-            end)
-        end
-    end
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+    
+    -- Ubah status health ke nilai yang sangat tinggi (math.huge terkadang di-reset game, kita pakai angka spesifik)
+    humanoid.MaxHealth = 999999
+    humanoid.Health = 999999
 end
 
--- Loop untuk memastikan status GodMode aktif terus meski kena pukulan beruntun
-game:GetService("RunService").Heartbeat:Connect(function()
+-- Loop konstan untuk menangani jika ada script server yang mencoba memaksa mengurangi darah
+hbConnection = game:GetService("RunService").Heartbeat:Connect(function()
     if godModeEnabled and player.Character then
         local hum = player.Character:FindFirstChildOfClass("Humanoid")
         if hum then
-            hum.Health = math.huge
-            -- Cegah mati dari Void
+            -- Paksa balik darah ke maksimal setiap milidetik sebelum server sempat memproses kematian
+            if hum.Health < hum.MaxHealth then
+                hum.Health = hum.MaxHealth
+            end
+            
+            -- Cegah mati kena batas Void bawah map
             if player.Character.PrimaryPart and player.Character.PrimaryPart.Position.Y < -500 then
                 player.Character.PrimaryPart.CFrame = CFrame.new(0, 50, 0)
             end
@@ -126,14 +124,17 @@ ToggleBtn.MouseButton1Click:Connect(function()
     if godModeEnabled then
         ToggleBtn.Text = "God Mode: ON"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        runUltraGodMode()
+        runGodModeV3()
     else
         ToggleBtn.Text = "God Mode: OFF"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        -- Reset Karakter untuk mematikan God Mode sepenuhnya
         if player.Character then
             local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            if hum then hum.Health = 0 end
+            if hum then 
+                hum.MaxHealth = 100 
+                hum.Health = 100
+                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+            end
         end
     end
 end)
@@ -143,10 +144,10 @@ OpenCloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Respawn Handler
+-- Deteksi saat karakter hidup kembali
 player.CharacterAdded:Connect(function()
     if godModeEnabled then
         task.wait(0.5)
-        runUltraGodMode()
+        runGodModeV3()
     end
 end)
