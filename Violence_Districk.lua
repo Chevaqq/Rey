@@ -1,7 +1,8 @@
 -- =============================================================================
--- PROJECT: CHEVA HUB - VIOLENCE DISTRICT PERFECT EDITION
+-- PROJECT: CHEVA HUB - VIOLENCE DISTRICT SUPREME EDITION
 -- COMPATIBILITY: Delta Executor Mobile (CoreGui / gethui Bypass)
--- STATUS: FIXED (FOV PERSISTENT, LOCAL PLAYER ESP ENABLED, NONE TEXT CLEANED)
+-- FEATURES: Aimlock (HRP Killer), Chams Killer & Gen (with Progress), Backpack ESP
+-- STATUS: ALL FEATURES AUTO-ON / INSTANT ACTIVATION
 -- =============================================================================
 
 local Players = game:GetService("Players")
@@ -14,13 +15,14 @@ local CoreGui = game:GetService("CoreGui")
 local Config = {
     Aimlock = true,
     ChamsKiller = true,
+    ChamsGenerator = true,
     ESPName = true,
     ESPWeapon = true
 }
 
--- Injeksi Antarmuka menggunakan Jalur Proteksi Executor Mobile
+-- Injeksi Antarmuka menggunakan Jalur Proteksi Executor Mobile (Anti-Gagal)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ChevaHub_PerfectViolence"
+ScreenGui.Name = "ChevaHub_SupremeViolence"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
@@ -37,8 +39,8 @@ end
 -- INTERFASE UI (MAIN MENU & OPEN/CLOSE)
 -- =============================================================================
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 260)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -130)
+MainFrame.Size = UDim2.new(0, 320, 0, 290)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -145)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 16)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -112,10 +114,11 @@ local function CreateToggle(text, configKey)
     updateVisual()
 end
 
-CreateToggle("Aimlock + Prediction", "Aimlock")
+CreateToggle("Aimlock (Lock Killer HRP)", "Aimlock")
 CreateToggle("Chams Killer (Red)", "ChamsKiller")
+CreateToggle("Chams Generator (Yellow + %)", "ChamsGenerator")
 CreateToggle("Show Name ESP", "ESPName")
-CreateToggle("Show Weapon ESP", "ESPWeapon")
+CreateToggle("Show Weapon (Backpack/Inventory)", "ESPWeapon")
 
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Size = UDim2.new(0, 70, 0, 30)
@@ -145,7 +148,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 -- =============================================================================
--- VISUAL FOV & AIM PREDICTION INDICATOR TEXT (PERSISTENT / TETAP AKTIF)
+-- VISUAL FOV & AIM PREDICTION INDICATOR TEXT (PERSISTENT)
 -- =============================================================================
 local FOVSize = 70
 
@@ -181,14 +184,13 @@ TextStroke.Thickness = 1.5
 TextStroke.Color = Color3.fromRGB(0, 0, 0)
 TextStroke.Parent = PredictionLabel
 
--- Kontrol Visibilitas FOV & Teks (Hanya dipengaruhi Toggle Fitur, Bukan Tombol Close Menu!)
 RunService.RenderStepped:Connect(function()
     FOVRing.Visible = Config.Aimlock
     PredictionLabel.Visible = Config.Aimlock
 end)
 
 -- =============================================================================
--- DETECTOR ENGINE (CHAMS + ADVANCED ESP + AIM PREDICTION)
+-- HELPER ENGINE: ROLE FILTER & BACKPACK INVENTORY SCANNER
 -- =============================================================================
 local function IsKiller(model)
     if model:IsA("Model") then
@@ -199,20 +201,37 @@ local function IsKiller(model)
     return false
 end
 
-local function GetEquippedItem(model)
-    for _, obj in ipairs(model:GetChildren()) do
-        if obj:IsA("Tool") then
-            return obj.Name
+local function GetAllItemsFromBackpack(player, model)
+    local items = {}
+    
+    -- Ambil dari tas (Backpack) jika ada objek playernya
+    if player and player:FindFirstChild("Backpack") then
+        for _, tool in ipairs(player.Backpack:GetChildren()) do
+            if tool:IsA("Tool") then table.insert(items, tool.Name) end
         end
     end
-    return "Empty Hands" -- Pengganti teks None agar lebih rapi
+    
+    -- Ambil juga yang sedang dipegang di tangan karakter saat ini
+    for _, tool in ipairs(model:GetChildren()) do
+        if tool:IsA("Tool") then table.insert(items, tool.Name) end
+    end
+    
+    if #items > 0 then
+        return table.concat(items, ", ")
+    else
+        return "Empty Hands"
+    end
 end
 
+-- =============================================================================
+-- CORE LOOP PROCESSING (CHAMS, BACKPACK ESP, GENERATOR TRACKER, AIMLOCK HRP)
+-- =============================================================================
 local function ProcessGameLogic()
     local Camera = Workspace.CurrentCamera
     local ClosestKiller = nil
     local ShortestDistance = math.huge
 
+    -- PART 1: PLAYER & CHARACTER CORE LOOP (Chams Killer, Name, Backpack ESP)
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
             local pl = Players:GetPlayerFromCharacter(obj)
@@ -220,7 +239,7 @@ local function ProcessGameLogic()
             local head = obj:FindFirstChild("Head")
 
             if head then
-                -- 1. CHAMS KILLER
+                -- 1. CHAMS KILLER (RED FULL)
                 local foundHighlight = obj:FindFirstChild("ChevaKillerCham")
                 if Config.ChamsKiller and IsKiller(obj) and obj ~= LocalPlayer.Character then
                     if not foundHighlight then
@@ -236,7 +255,7 @@ local function ProcessGameLogic()
                     if foundHighlight then foundHighlight:Destroy() end
                 end
 
-                -- 2. BILLBOARD GUI ESP SYSTEM (DAPAT MELIHAT DIRI SENDIRI DAN PLAYER LAIN)
+                -- 2. ADVANCED BILLBOARD GUI ESP (NAME + BACKPACK WEAPONS)
                 local foundBillboard = obj:FindFirstChild("ChevaAdvancedESP")
                 if (Config.ESPName or Config.ESPWeapon) then
                     if not foundBillboard then
@@ -267,11 +286,9 @@ local function ProcessGameLogic()
                         WeaponTag.Parent = Billboard
                         Instance.new("UIStroke", WeaponTag).Color = Color3.fromRGB(0, 0, 0)
                     else
-                        -- Aturan Penamaan & Penentuan Role Status (Survivor / Killer)
                         local baseName = pl and pl.Name or obj.Name
                         local rolePrefix = IsKiller(obj) and "[KILLER] " or "[SURVIVOR] "
                         
-                        -- Jika karakter adalah kamu sendiri, tandai dengan teks khusus di depan
                         if obj == LocalPlayer.Character then
                             baseName = "YOU (" .. baseName .. ")"
                         end
@@ -279,8 +296,9 @@ local function ProcessGameLogic()
                         foundBillboard.NameTag.Text = Config.ESPName and (rolePrefix .. baseName) or ""
                         foundBillboard.NameTag.TextColor3 = IsKiller(obj) and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(50, 255, 100)
 
-                        local item = GetEquippedItem(obj)
-                        foundBillboard.WeaponTag.Text = Config.ESPWeapon and ("Holding: " .. item) or ""
+                        -- DETEKSI BACKPACK (Tetap terbaca biarpun tidak di-equip)
+                        local backpackItems = GetAllItemsFromBackpack(pl, obj)
+                        foundBillboard.WeaponTag.Text = Config.ESPWeapon and ("Holding: " .. backpackItems) or ""
                         foundBillboard.WeaponTag.TextColor3 = Color3.fromRGB(255, 220, 50)
                     end
                 else
@@ -288,7 +306,7 @@ local function ProcessGameLogic()
                 end
             end
 
-            -- 3. LOCK TARGET ENGINE (HANYA UNTUK KILLER SEJATI DAN BUKAN KARAKTER SENDIRI)
+            -- 3. AIMLOCK LOCK ON TARGET (MENGUNCI HUMANOIDROOTPART KILLER)
             if Config.Aimlock and IsKiller(obj) and obj ~= LocalPlayer.Character then
                 local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
                 if onScreen then
@@ -301,21 +319,74 @@ local function ProcessGameLogic()
                     end
                 end
             end
+        end
 
+        -- PART 2: GENERATOR RADAR LOOP (Chams Kuning + Progress Tracker)
+        if obj:IsA("Model") and string.find(string.lower(obj.Name), "generator") then
+            -- Chams Kuning Full
+            local genHighlight = obj:FindFirstChild("ChevaGenCham")
+            if Config.ChamsGenerator then
+                if not genHighlight then
+                    local High = Instance.new("Highlight")
+                    High.Name = "ChevaGenCham"
+                    High.FillColor = Color3.fromRGB(255, 255, 0) -- Kuning Full
+                    High.FillTransparency = 0.4
+                    High.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    High.Adornee = obj
+                    High.Parent = obj
+                end
+            else
+                if genHighlight then genHighlight:Destroy() end
+            end
+
+            -- Mengambil Nilai Progress Generator (mencari intValue/numberValue progress di dalam model)
+            local progressValue = obj:FindFirstChild("Progress") or obj:FindFirstChild("ProgressValue")
+            local currentPercent = "0%"
+            if progressValue then
+                currentPercent = tostring(math.floor(progressValue.Value)) .. "%"
+            end
+
+            -- Membuat Text Progress Di Atas Generator
+            local genBillboard = obj:FindFirstChild("ChevaGenProgress")
+            if Config.ChamsGenerator then
+                if not genBillboard then
+                    local Billboard = Instance.new("BillboardGui")
+                    Billboard.Name = "ChevaGenProgress"
+                    Billboard.Size = UDim2.new(0, 150, 0, 30)
+                    Billboard.AlwaysOnTop = true
+                    Billboard.ExtentsOffset = Vector3.new(0, 4, 0)
+                    Billboard.Parent = obj
+
+                    local ProgressTag = Instance.new("TextLabel")
+                    ProgressTag.Name = "ProgressTag"
+                    ProgressTag.Size = UDim2.new(1, 0, 1, 0)
+                    ProgressTag.BackgroundTransparency = 1
+                    ProgressTag.Font = Enum.Font.Code
+                    ProgressTag.TextSize = 13
+                    ProgressTag.TextColor3 = Color3.fromRGB(255, 255, 50)
+                    ProgressTag.Parent = Billboard
+                    Instance.new("UIStroke", ProgressTag).Color = Color3.fromRGB(0, 0, 0)
+                else
+                    genBillboard.ProgressTag.Text = "GENERATOR: " .. currentPercent
+                end
+            else
+                if genBillboard then genBillboard:Destroy() end
+            end
         end
     end
 
-    -- EKSEKUSI AIM PREDICTION TRACKING ENGINE
+    -- EKSEKUSI AIM PREDICTION PADA HUMANOIDROOTPART TARGET
     if ClosestKiller and Config.Aimlock then
         local targetRoot = ClosestKiller.HumanoidRootPart
         local pingSimulationOffset = 0.165 
         local predictedPosition = targetRoot.Position + (targetRoot.Velocity * pingSimulationOffset)
         
+        -- Mengunci kamera ke titik prediksi HumanoidRootPart Killer
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, predictedPosition)
     end
 end
 
--- Render loop konstan
+-- Render loop konstan tanpa drop frame
 RunService.RenderStepped:Connect(function()
     pcall(ProcessGameLogic)
 end)
