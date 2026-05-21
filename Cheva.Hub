@@ -5,11 +5,10 @@ local Title = Instance.new("TextLabel")
 local ToggleBtn = Instance.new("TextButton")
 local OpenCloseBtn = Instance.new("TextButton")
 
--- Parent ke CoreGui biar nggak gampang kehapus kalau kamu mati/reset
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Tombol Open/Close (Kecil di pinggir layar)
+-- Tombol Menu (Open/Close)
 OpenCloseBtn.Name = "OpenCloseBtn"
 OpenCloseBtn.Parent = ScreenGui
 OpenCloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -21,40 +20,39 @@ OpenCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenCloseBtn.TextSize = 14
 OpenCloseBtn.BorderSizePixel = 0
 
--- UI Corner untuk mempercantik tombol
 local btnCorner = Instance.new("UICorner")
 btnCorner.CornerRadius = UDim.new(0, 8)
 btnCorner.Parent = OpenCloseBtn
 
--- Menu Utama (Frame)
+-- Main Frame
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.Position = UDim2.new(0.4, 0, 0.4, 0)
 MainFrame.Size = UDim2.new(0, 220, 0, 150)
-MainFrame.Visible = false -- Mulai dengan tersembunyi
+MainFrame.Visible = false
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- Biar menunya bisa digeser di layar Delta
+MainFrame.Draggable = true
 
 local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 12)
 frameCorner.Parent = MainFrame
 
--- Judul Menu
+-- Title
 Title.Name = "Title"
 Title.Parent = MainFrame
 Title.BackgroundTransparency = 1
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "DELTA GODMODE"
-Title.TextColor3 = Color3.fromRGB(0, 255, 127)
+Title.Text = "DELTA ULTRA GOD"
+Title.TextColor3 = Color3.fromRGB(255, 69, 0)
 Title.TextSize = 18
 
--- Tombol ON/OFF God Mode
+-- Toggle Button
 ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Parent = MainFrame
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Merah (OFF)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ToggleBtn.Position = UDim2.new(0.1, 0, 0.4, 0)
 ToggleBtn.Size = UDim2.new(0.8, 0, 0, 45)
 ToggleBtn.Font = Enum.Font.SourceSansBold
@@ -67,70 +65,88 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 8)
 toggleCorner.Parent = ToggleBtn
 
--- [[ FUNCTIONALITY ]]
+-- [[ ADVANCED GOD MODE LOGIC ]]
 local player = game:GetService("Players").LocalPlayer
 local godModeEnabled = false
-local connection
 
--- Fungsi inti God Mode
-local function enableGodMode()
-    if connection then connection:Disconnect() end
+local function runUltraGodMode()
+    local char = player.Character
+    if not char then return end
     
-    connection = game:GetService("RunService").Heartbeat:Connect(function()
-        if godModeEnabled and player.Character then
-            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                -- Isi darah penuh terus-menerus
-                humanoid.MaxHealth = math.huge
-                humanoid.Health = math.huge
-                
-                -- Mematikan fungsi mati bawaan Roblox
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                
-                -- Cegah mati karena jatuh ke Void (di bawah map)
-                if player.Character.PrimaryPart and player.Character.PrimaryPart.Position.Y < -500 then
-                    player.Character.PrimaryPart.CFrame = CFrame.new(0, 50, 0) -- Teleport balik ke atas map
-                end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    -- METODE 1: Memutus koneksi mati ke server
+    humanoid.MaxHealth = math.huge
+    humanoid.Health = math.huge
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+
+    -- METODE 2: Hapus Skrip Darah / Health bawaan game yang biasanya ngatur damage
+    for _, child in pairs(char:GetChildren()) do
+        if child:IsA("Script") or child:IsA("LocalScript") then
+            if child.Name:lower():match("health") or child.Name:lower():match("damage") then
+                child:Destroy()
             end
         end
-    end)
-end
+    end
 
-local function disableGodMode()
-    if connection then connection:Disconnect() end
-    if player.Character then
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.MaxHealth = 100
-            humanoid.Health = 100
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+    -- METODE 3: Desync Hitbox (Menghilangkan leher/neck joint secara lokal agar hit tidak masuk ke server)
+    -- Ini taktik paling ampuh buat game berantem/pukul-pukulan
+    local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+    local head = char:FindFirstChild("Head")
+    if head and torso then
+        local neck = head:FindFirstChild("Neck") or torso:FindFirstChild("Neck")
+        if neck and godModeEnabled then
+            -- Kita matikan fungsi 'Mati kalau kepala lepas'
+            pcall(function()
+                game:GetService("Workspace").CurrentCamera.CameraSubject = head
+                neck:Destroy() -- Menghancurkan koneksi damage server
+            end)
         end
     end
 end
 
--- Logic Klik Tombol ON/OFF
+-- Loop untuk memastikan status GodMode aktif terus meski kena pukulan beruntun
+game:GetService("RunService").Heartbeat:Connect(function()
+    if godModeEnabled and player.Character then
+        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.Health = math.huge
+            -- Cegah mati dari Void
+            if player.Character.PrimaryPart and player.Character.PrimaryPart.Position.Y < -500 then
+                player.Character.PrimaryPart.CFrame = CFrame.new(0, 50, 0)
+            end
+        end
+    end
+end)
+
+-- Tombol On/Off
 ToggleBtn.MouseButton1Click:Connect(function()
     godModeEnabled = not godModeEnabled
     if godModeEnabled then
         ToggleBtn.Text = "God Mode: ON"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- Hijau (ON)
-        enableGodMode()
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        runUltraGodMode()
     else
         ToggleBtn.Text = "God Mode: OFF"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Merah (OFF)
-        disableGodMode()
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        -- Reset Karakter untuk mematikan God Mode sepenuhnya
+        if player.Character then
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.Health = 0 end
+        end
     end
 end)
 
--- Logic Klik Tombol Open/Close Menu
+-- Tombol Open/Close Menu
 OpenCloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Reset script otomatis pas karakter kamu respawn/ganti map
+-- Respawn Handler
 player.CharacterAdded:Connect(function()
     if godModeEnabled then
-        task.wait(0.5) -- Tunggu karakter nge-load sempurna
-        enableGodMode()
+        task.wait(0.5)
+        runUltraGodMode()
     end
 end)
