@@ -1,7 +1,7 @@
 -- =============================================================================
--- PROJECT: CHEVA HUB - VIOLENCE DISTRICT SUPREME EDITION
+-- PROJECT: CHEVA HUB - VIOLENCE DISTRICT SUPREME EDITION (FIXED GENERATOR)
 -- COMPATIBILITY: Delta Executor Mobile (CoreGui / gethui Bypass)
--- FEATURES: Aimlock (HRP Killer), Chams Killer & Gen (with Progress), Backpack ESP
+-- FEATURES: Aimlock (HRP Killer), Chams Killer & Gen (FIXED % PROGRESS), Backpack ESP
 -- STATUS: ALL FEATURES AUTO-ON / INSTANT ACTIVATION
 -- =============================================================================
 
@@ -22,7 +22,7 @@ local Config = {
 
 -- Injeksi Antarmuka menggunakan Jalur Proteksi Executor Mobile (Anti-Gagal)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ChevaHub_SupremeViolence"
+ScreenGui.Name = "ChevaHub_SupremeViolence_Fixed"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
@@ -203,24 +203,39 @@ end
 
 local function GetAllItemsFromBackpack(player, model)
     local items = {}
-    
-    -- Ambil dari tas (Backpack) jika ada objek playernya
     if player and player:FindFirstChild("Backpack") then
         for _, tool in ipairs(player.Backpack:GetChildren()) do
             if tool:IsA("Tool") then table.insert(items, tool.Name) end
         end
     end
-    
-    -- Ambil juga yang sedang dipegang di tangan karakter saat ini
     for _, tool in ipairs(model:GetChildren()) do
         if tool:IsA("Tool") then table.insert(items, tool.Name) end
     end
-    
     if #items > 0 then
         return table.concat(items, ", ")
     else
         return "Empty Hands"
     end
+end
+
+-- Fungsi Pemindai Cerdas Nilai Progress Generator
+local function GetGeneratorProgress(genModel)
+    -- Sistem memindai semua objek bertipe Value di dalam generator secara mendalam
+    for _, child in ipairs(genModel:GetDescendants()) do
+        if child:IsA("NumberValue") or child:IsA("IntValue") then
+            local nameLower = string.lower(child.Name)
+            -- Memastikan nama objeknya mendeteksi kata kunci progres game
+            if string.find(nameLower, "progress") or string.find(nameLower, "progres") or string.find(nameLower, "repair") or string.find(nameLower, "value") then
+                local val = child.Value
+                -- Konversi jika game memakai skala pecahan 0-1 menjadi persen (0-100)
+                if val <= 1 and val > 0 and not string.find(nameLower, "max") then
+                    val = val * 100
+                end
+                return math.clamp(math.floor(val), 0, 100)
+            end
+        end
+    end
+    return 0
 end
 
 -- =============================================================================
@@ -231,8 +246,8 @@ local function ProcessGameLogic()
     local ClosestKiller = nil
     local ShortestDistance = math.huge
 
-    -- PART 1: PLAYER & CHARACTER CORE LOOP (Chams Killer, Name, Backpack ESP)
     for _, obj in ipairs(Workspace:GetDescendants()) do
+        -- PART 1: PLAYER ESP & AIMLOCK CORE SYSTEM
         if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
             local pl = Players:GetPlayerFromCharacter(obj)
             local rootPart = obj.HumanoidRootPart
@@ -296,7 +311,6 @@ local function ProcessGameLogic()
                         foundBillboard.NameTag.Text = Config.ESPName and (rolePrefix .. baseName) or ""
                         foundBillboard.NameTag.TextColor3 = IsKiller(obj) and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(50, 255, 100)
 
-                        -- DETEKSI BACKPACK (Tetap terbaca biarpun tidak di-equip)
                         local backpackItems = GetAllItemsFromBackpack(pl, obj)
                         foundBillboard.WeaponTag.Text = Config.ESPWeapon and ("Holding: " .. backpackItems) or ""
                         foundBillboard.WeaponTag.TextColor3 = Color3.fromRGB(255, 220, 50)
@@ -306,7 +320,7 @@ local function ProcessGameLogic()
                 end
             end
 
-            -- 3. AIMLOCK LOCK ON TARGET (MENGUNCI HUMANOIDROOTPART KILLER)
+            -- 3. AIMLOCK TARGET ENGINE (LOCK KILLER HRP)
             if Config.Aimlock and IsKiller(obj) and obj ~= LocalPlayer.Character then
                 local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
                 if onScreen then
@@ -321,7 +335,7 @@ local function ProcessGameLogic()
             end
         end
 
-        -- PART 2: GENERATOR RADAR LOOP (Chams Kuning + Progress Tracker)
+        -- PART 2: DYNAMIC GENERATOR DETECTOR (CHAMS KUNING + DYNAMIC PERCENTAGE)
         if obj:IsA("Model") and string.find(string.lower(obj.Name), "generator") then
             -- Chams Kuning Full
             local genHighlight = obj:FindFirstChild("ChevaGenCham")
@@ -329,7 +343,7 @@ local function ProcessGameLogic()
                 if not genHighlight then
                     local High = Instance.new("Highlight")
                     High.Name = "ChevaGenCham"
-                    High.FillColor = Color3.fromRGB(255, 255, 0) -- Kuning Full
+                    High.FillColor = Color3.fromRGB(255, 255, 0)
                     High.FillTransparency = 0.4
                     High.OutlineColor = Color3.fromRGB(255, 255, 255)
                     High.Adornee = obj
@@ -339,20 +353,17 @@ local function ProcessGameLogic()
                 if genHighlight then genHighlight:Destroy() end
             end
 
-            -- Mengambil Nilai Progress Generator (mencari intValue/numberValue progress di dalam model)
-            local progressValue = obj:FindFirstChild("Progress") or obj:FindFirstChild("ProgressValue")
-            local currentPercent = "0%"
-            if progressValue then
-                currentPercent = tostring(math.floor(progressValue.Value)) .. "%"
-            end
+            -- Eksekusi pembacaan progress dinamis dari engine di atas
+            local currentPercentNum = GetGeneratorProgress(obj)
+            local currentPercentStr = tostring(currentPercentNum) .. "%"
 
-            -- Membuat Text Progress Di Atas Generator
+            -- Membuat/Memperbarui Teks Progress Di Atas Generator
             local genBillboard = obj:FindFirstChild("ChevaGenProgress")
             if Config.ChamsGenerator then
                 if not genBillboard then
                     local Billboard = Instance.new("BillboardGui")
                     Billboard.Name = "ChevaGenProgress"
-                    Billboard.Size = UDim2.new(0, 150, 0, 30)
+                    Billboard.Size = UDim2.new(0, 160, 0, 30)
                     Billboard.AlwaysOnTop = true
                     Billboard.ExtentsOffset = Vector3.new(0, 4, 0)
                     Billboard.Parent = obj
@@ -367,7 +378,7 @@ local function ProcessGameLogic()
                     ProgressTag.Parent = Billboard
                     Instance.new("UIStroke", ProgressTag).Color = Color3.fromRGB(0, 0, 0)
                 else
-                    genBillboard.ProgressTag.Text = "GENERATOR: " .. currentPercent
+                    genBillboard.ProgressTag.Text = "GENERATOR: " .. currentPercentStr
                 end
             else
                 if genBillboard then genBillboard:Destroy() end
@@ -381,12 +392,11 @@ local function ProcessGameLogic()
         local pingSimulationOffset = 0.165 
         local predictedPosition = targetRoot.Position + (targetRoot.Velocity * pingSimulationOffset)
         
-        -- Mengunci kamera ke titik prediksi HumanoidRootPart Killer
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, predictedPosition)
     end
 end
 
--- Render loop konstan tanpa drop frame
+-- Run Loop Render
 RunService.RenderStepped:Connect(function()
     pcall(ProcessGameLogic)
 end)
