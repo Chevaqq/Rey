@@ -5,12 +5,11 @@ local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
--- Hapus UI lama jika ada biar tidak menumpuk saat di-execute ulang
+-- Bersihkan UI lama agar tidak menumpuk
 if CoreGui:FindFirstChild("ChevaHubKustom") then
     CoreGui.ChevaHubKustom:Destroy()
 end
 
--- Main ScreenGui
 local MainGui = Instance.new("ScreenGui")
 MainGui.Name = "ChevaHubKustom"
 MainGui.Parent = CoreGui
@@ -22,7 +21,7 @@ MainGui.ResetOnSpawn = false
 local LoadingFrame = Instance.new("Frame")
 LoadingFrame.Size = UDim2.new(1, 0, 1, 0)
 LoadingFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-LoadingFrame.BackgroundTransparency = 1 -- Mulai dari transparan untuk fade-in
+LoadingFrame.BackgroundTransparency = 1
 LoadingFrame.ZIndex = 10
 LoadingFrame.Parent = MainGui
 
@@ -32,7 +31,7 @@ LoadingText.Position = UDim2.new(0.5, -200, 0.5, -50)
 LoadingText.BackgroundTransparency = 1
 LoadingText.Text = "Made By Cheva"
 LoadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
-LoadingText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Pinggiran hitam
+LoadingText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 LoadingText.TextStrokeTransparency = 1
 LoadingText.Font = Enum.Font.SourceSansBold
 LoadingText.TextSize = 45
@@ -40,20 +39,18 @@ LoadingText.TextTransparency = 1
 LoadingText.ZIndex = 11
 LoadingText.Parent = LoadingFrame
 
--- Animasi Fade In (0.5 detik)
 local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
 TweenService:Create(LoadingFrame, tweenInfo, {BackgroundTransparency = 0}):Play()
 TweenService:Create(LoadingText, tweenInfo, {TextTransparency = 0, TextStrokeTransparency = 0}):Play()
-task.wait(2.5) -- Menetap selama 2 detik
+task.wait(2.5)
 
--- Animasi Fade Out (0.5 detik)
 TweenService:Create(LoadingFrame, tweenInfo, {BackgroundTransparency = 1}):Play()
 TweenService:Create(LoadingText, tweenInfo, {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
 task.wait(0.5)
 LoadingFrame:Destroy()
 
 -- =============================================================================
--- GLOBALS & VARIABLE CONTROLS
+-- GLOBALS & GAME DETECTION UNIVERSAL
 -- =============================================================================
 local FOVColor = Color3.fromRGB(255, 0, 0)
 local FOVSize = 100
@@ -64,7 +61,31 @@ local ChamsKillerEnabled = false
 local ChamsSurvivorEnabled = false
 local ChamsGenEnabled = false
 
--- FOV Ring Setup (Hanya lingkaran pinggir, tengah transparan)
+-- Fungsi Deteksi Role Universal (Mengecek Team, Atribut, Nama, atau Tools)
+local function GetPlayerRole(plr)
+    if not plr or not plr.Character then return "Survivor" end
+    
+    -- Cek string atribut yang umum di game DBD/Horor Roblox
+    if plr:GetAttribute("Role") == "Killer" or plr.Character:GetAttribute("Role") == "Killer" then
+        return "Killer"
+    end
+    -- Cek nama team jika ada
+    if plr.Team and (plr.Team.Name:lower():find("killer") or plr.Team.Name:lower():find("murder")) then
+        return "Killer"
+    end
+    -- Cek jika memegang senjata/item pembunuh
+    if plr.Character:FindFirstChildOfClass("Tool") and (plr.Character:FindFirstChildOfClass("Tool").Name:lower():find("knife") or plr.Character:FindFirstChildOfClass("Tool").Name:lower():find("weapon")) then
+        return "Killer"
+    end
+    -- Cek string nama player
+    if plr.Name:lower():find("killer") then
+        return "Killer"
+    end
+    
+    return "Survivor"
+end
+
+-- FOV Ring Rendering
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Filled = false
 FOVCircle.Thickness = 2
@@ -81,18 +102,8 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Helper: Deteksi Role Player
-local function GetPlayerRole(plr)
-    if plr.Character then
-        if plr.Character:AttributeString("Role") == "Killer" or plr.Name:lower():find("killer") then
-            return "Killer"
-        end
-    end
-    return "Survivor"
-end
-
 -- =============================================================================
--- 2. KEY SYSTEM WINDOW (Hitam & Putih)
+-- 2. KEY SYSTEM WINDOW
 -- =============================================================================
 local KeyFrame = Instance.new("Frame")
 KeyFrame.Size = UDim2.new(0, 300, 0, 180)
@@ -102,7 +113,6 @@ KeyFrame.BorderSizePixel = 2
 KeyFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 KeyFrame.Parent = MainGui
 
--- Membuat KeyFrame bisa di-drag (Khusus HP / PC)
 local dragging, dragInput, dragStart, startPos
 KeyFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -150,7 +160,7 @@ KeySubmit.Font = Enum.Font.SourceSansBold
 KeySubmit.TextSize = 16
 
 -- =============================================================================
--- 3. MAIN MENU WINDOW (Hitam & Putih) - Terbuka jika Key Benar
+-- 3. MAIN MENU WINDOW
 -- =============================================================================
 local MenuFrame = Instance.new("Frame")
 MenuFrame.Size = UDim2.new(0, 450, 0, 300)
@@ -158,10 +168,9 @@ MenuFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 MenuFrame.BorderSizePixel = 2
 MenuFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-MenuFrame.Visible = false -- Sembunyikan dulu sampai key sukses
+MenuFrame.Visible = false
 MenuFrame.Parent = MainGui
 
--- Dragging untuk Menu Utama
 local mDragging, mDragInput, mDragStart, mStartPos
 MenuFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -179,7 +188,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Title Menu
 local Title = Instance.new("TextLabel", MenuFrame)
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundTransparency = 1
@@ -189,7 +197,6 @@ Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 20
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- Container Tab (Sebelah Kiri)
 local TabContainer = Instance.new("Frame", MenuFrame)
 TabContainer.Size = UDim2.new(0, 100, 1, -35)
 TabContainer.Position = UDim2.new(0, 0, 0, 35)
@@ -199,14 +206,12 @@ TabContainer.BorderSizePixel = 0
 local TabListLayout = Instance.new("UIListLayout", TabContainer)
 TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Container Isi Fitur (Sebelah Kanan)
 local ContentContainer = Instance.new("Frame", MenuFrame)
 ContentContainer.Size = UDim2.new(1, -100, 1, -35)
 ContentContainer.Position = UDim2.new(0, 100, 0, 35)
 ContentContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 ContentContainer.BorderSizePixel = 0
 
--- Sistem Pindah Tab
 local Tabs = {}
 local function CreateTab(tabName)
     local TabPage = Instance.new("ScrollingFrame", ContentContainer)
@@ -244,19 +249,17 @@ local function CreateTab(tabName)
     return TabPage
 end
 
--- Ambil halaman masing-masing Tab
 local PageMain = CreateTab("Main")
 local PageSurvivor = CreateTab("Survivor")
 local PageKiller = CreateTab("Killer")
 local PageVisual = CreateTab("Visual")
 
--- Aktifkan tab pertama secara default
 Tabs["Main"].Page.Visible = true
 Tabs["Main"].Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 Tabs["Main"].Btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 
 -- =============================================================================
--- KUSTOM UI COMPONENTS CREATOR (Ketik / Input / Toggle)
+-- UI ELEMENTS BUILDERS
 -- =============================================================================
 local function CreateToggle(parent, text, default, callback)
     local Frame = Instance.new("Frame", parent)
@@ -322,7 +325,7 @@ local function CreateInput(parent, labelText, placeholder, callback)
     end)
 end
 
--- Button Open/Close Floating untuk menyembunyikan/memunculkan Menu
+-- Floating Toggle Button Menu
 local ToggleMenuBtn = Instance.new("TextButton", MainGui)
 ToggleMenuBtn.Size = UDim2.new(0, 80, 0, 35)
 ToggleMenuBtn.Position = UDim2.new(0, 10, 0, 10)
@@ -332,18 +335,17 @@ ToggleMenuBtn.Text = "Open/Close"
 ToggleMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleMenuBtn.Font = Enum.Font.SourceSansBold
 ToggleMenuBtn.TextSize = 14
-ToggleMenuBtn.Visible = false -- Aktif jika key sukses
+ToggleMenuBtn.Visible = false
 
 ToggleMenuBtn.MouseButton1Click:Connect(function()
     MenuFrame.Visible = not MenuFrame.Visible
 end)
 
--- Validation Logic untuk Key System
 KeySubmit.MouseButton1Click:Connect(function()
     if KeyInput.Text == "New" then
-        KeyFrame:Destroy() -- Hapus panel login
-        MenuFrame.Visible = true -- Tampilkan Menu utama
-        ToggleMenuBtn.Visible = true -- Tampilkan tombol open/close
+        KeyFrame:Destroy()
+        MenuFrame.Visible = true
+        ToggleMenuBtn.Visible = true
     else
         KeyInput.Text = ""
         KeyInput.PlaceholderText = "Key Salah! Coba lagi..."
@@ -351,50 +353,71 @@ KeySubmit.MouseButton1Click:Connect(function()
 end)
 
 -- =============================================================================
--- LOGIC FITUR: TAB MAIN
+-- TAB MAIN LOGIC
 -- =============================================================================
 CreateInput(PageMain, "Char Me (Ketik Username & Tekan Enter)", "Username Roblox...", function(text)
     local targetUserId = nil
     pcall(function()
         targetUserId = Players:GetUserIdFromNameAsync(text)
     end)
-    if targetUserId and LocalPlayer.Character then
+    if targetUserId and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         local humDescription = Players:GetHumanoidDescriptionFromUserId(targetUserId)
         if humDescription then
-            LocalPlayer.Character:WaitForChild("Humanoid"):ApplyDescription(humDescription)
+            -- Memaksa pergantian description pakaian dan bentuk tubuh secara instan
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ApplyDescription(humDescription)
+        end
+    end
+end)
+
+-- Loop aktif untuk menjaga WalkSpeed agar tidak ter-reset oleh anti-cheat bawaan game
+local TargetSpeed = 16
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            if LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed ~= TargetSpeed and TargetSpeed ~= 16 then
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = TargetSpeed
+            end
         end
     end
 end)
 
 CreateInput(PageMain, "Speed Hack (Ketik angka & Enter)", "Contoh: 50", function(text)
     local speed = tonumber(text)
-    if speed and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speed
+    if speed then 
+        TargetSpeed = speed 
+    else
+        TargetSpeed = 16
     end
 end)
 
 -- =============================================================================
--- LOGIC FITUR: TAB SURVIVOR
+-- TAB SURVIVOR LOGIC
 -- =============================================================================
 CreateToggle(PageSurvivor, "Aimlock (Lock Killer Only)", false, function(val)
     AimlockEnabled = val
     if AimlockEnabled then
         task.spawn(function()
             while AimlockEnabled do
-                task.wait()
-                local closestKiller = nil
-                local shortestDistance = math.huge
-                for _, p in pairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and GetPlayerRole(p) == "Killer" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        local dist = (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                        if dist < shortestDistance then
-                            shortestDistance = dist
-                            closestKiller = p.Character.HumanoidRootPart
+                RunService.RenderStepped:Wait()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local closestKiller = nil
+                    local shortestDistance = math.huge
+                    
+                    for _, p in pairs(Players:GetPlayers()) do
+                        if p ~= LocalPlayer and GetPlayerRole(p) == "Killer" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local dist = (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                            if dist < shortestDistance then
+                                shortestDistance = dist
+                                closestKiller = p.Character.HumanoidRootPart
+                            end
                         end
                     end
-                end
-                if closestKiller and workspace.CurrentCamera then
-                    workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, closestKiller.Position)
+                    
+                    if closestKiller and workspace.CurrentCamera then
+                        -- Mengunci arah kamera ke posisi pembunuh secara mulus
+                        workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, closestKiller.Position)
+                    end
                 end
             end
         end)
@@ -418,8 +441,15 @@ CreateInput(PageSurvivor, "FOV Color (Format R,G,B)", "255,0,0", function(text)
 end)
 
 -- =============================================================================
--- LOGIC FITUR: TAB KILLER (Notifikasi Kepala !, !!!)
+-- TAB KILLER LOGIC (Kosong sesuai instruksi awal tab ini dipisahkan)
 -- =============================================================================
+-- Sesuai request, tab Killer tetap ada tapi fiturnya dipindah ke Visual
+
+-- =============================================================================
+-- TAB VISUAL LOGIC (Chams & Danger Notifier Kepala)
+-- =============================================================================
+
+-- Fitur Danger Notifier (Sekarang berada di Tab Visual)
 local Billboard = Instance.new("BillboardGui")
 Billboard.Size = UDim2.new(0, 100, 0, 50)
 Billboard.AlwaysOnTop = true
@@ -430,19 +460,18 @@ DangerText.Size = UDim2.new(1, 0, 1, 0)
 DangerText.BackgroundTransparency = 1
 DangerText.TextColor3 = Color3.fromRGB(255, 0, 0)
 DangerText.Font = Enum.Font.SourceSansBold
-DangerText.TextSize = 40
+DangerText.TextSize = 45
 DangerText.Text = ""
 
-CreateToggle(PageKiller, "Danger Notifier Head (!!!)", false, function(val)
+CreateToggle(PageVisual, "Danger Notifier Head (!!!)", false, function(val)
     DangerNotifierEnabled = val
     if DangerNotifierEnabled then
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
-            Billboard.Parent = LocalPlayer.Character.Head
-        end
         task.spawn(function()
             while DangerNotifierEnabled do
-                task.wait(0.2)
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                task.wait(0.1)
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    Billboard.Parent = LocalPlayer.Character.Head
+                    
                     local closestDist = math.huge
                     for _, p in pairs(Players:GetPlayers()) do
                         if p ~= LocalPlayer and GetPlayerRole(p) == "Killer" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
@@ -457,118 +486,4 @@ CreateToggle(PageKiller, "Danger Notifier Head (!!!)", false, function(val)
                         DangerText.Text = "!"
                     else
                         DangerText.Text = ""
-                    end
-                end
-            end
-        end)
-    else
-        DangerText.Text = ""
-        Billboard.Parent = nil
-    end
-end)
-
--- =============================================================================
--- LOGIC FITUR: TAB VISUAL (Chams Tanpa Isi/Hanya Garis Tepi & Generator)
--- =============================================================================
-local function ApplyChams(instance, color, flagName)
-    if not instance:FindFirstChild("ChevaHighlight") then
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ChevaHighlight"
-        highlight.FillTransparency = 1 -- 1 berarti tengahnya transparan bersih
-        highlight.OutlineColor = color
-        highlight.OutlineTransparency = 0
-        highlight.Adornee = instance
-        highlight.Parent = instance
-        
-        task.spawn(function()
-            while task.wait(0.5) do
-                if not _G[flagName] then
-                    highlight:Destroy()
-                    break
-                end
-            end
-        end)
-    end
-end
-
-CreateToggle(PageVisual, "Chams Killer (Garis Merah)", false, function(val)
-    ChamsKillerEnabled = val
-    _G.ChamsKillerFlag = val
-    if ChamsKillerEnabled then
-        task.spawn(function()
-            while ChamsKillerEnabled do
-                for _, p in pairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and GetPlayerRole(p) == "Killer" and p.Character then
-                        ApplyChams(p.Character, Color3.fromRGB(255, 0, 0), "ChamsKillerFlag")
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-    end
-end)
-
-CreateToggle(PageVisual, "Chams Survivor (Garis Hijau)", false, function(val)
-    ChamsSurvivorEnabled = val
-    _G.ChamsSurvivorFlag = val
-    if ChamsSurvivorEnabled then
-        task.spawn(function()
-            while ChamsSurvivorEnabled do
-                for _, p in pairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and GetPlayerRole(p) == "Survivor" and p.Character then
-                        ApplyChams(p.Character, Color3.fromRGB(0, 255, 0), "ChamsSurvivorFlag")
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-    end
-end)
-
-CreateToggle(PageVisual, "Chams Generator (Kuning + Prog)", false, function(val)
-    ChamsGenEnabled = val
-    _G.ChamsGenFlag = val
-    if ChamsGenEnabled then
-        task.spawn(function()
-            while ChamsGenEnabled do
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj.Name:lower():find("generator") and obj:IsA("Model") then
-                        ApplyChams(obj, Color3.fromRGB(255, 255, 0), "ChamsGenFlag")
-                        
-                        if not obj:FindFirstChild("GenProgressGui") then
-                            local gui = Instance.new("BillboardGui")
-                            gui.Name = "GenProgressGui"
-                            gui.Size = UDim2.new(0, 60, 0, 20)
-                            gui.AlwaysOnTop = true
-                            gui.ExtentsOffset = Vector3.new(0, 4, 0)
-                            
-                            local txt = Instance.new("TextLabel", gui)
-                            txt.Size = UDim2.new(1, 0, 1, 0)
-                            txt.BackgroundTransparency = 1
-                            txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-                            txt.Font = Enum.Font.SourceSansBold
-                            txt.TextSize = 14
-                            txt.Parent = gui
-                            gui.Parent = obj
-                            
-                            task.spawn(function()
-                                while ChamsGenEnabled and obj:FindFirstChild("GenProgressGui") do
-                                    local progress = obj:GetAttribute("Progress") or 0
-                                    txt.Text = "Prog: " .. tostring(progress) .. "%"
-                                    task.wait(0.5)
-                                end
-                            end)
-                        end
-                    end
-                end
-                task.wait(2)
-            end
-        end)
-    else
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj.Name:lower():find("generator") then
-                if obj:FindFirstChild("GenProgressGui") then obj.GenProgressGui:Destroy() end
-            end
-        end
-    end
-end)
+                
